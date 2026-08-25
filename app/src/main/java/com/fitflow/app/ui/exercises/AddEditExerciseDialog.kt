@@ -20,15 +20,20 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.ElectricBolt
 import androidx.compose.material.icons.filled.FitnessCenter
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Surface
@@ -45,6 +50,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
@@ -71,7 +77,17 @@ fun AddEditExerciseDialog(
     var isSprint by remember { mutableStateOf(exerciseToEdit?.isSprint ?: false) }
     var defaultSets by remember { mutableIntStateOf(exerciseToEdit?.defaultSets ?: 3) }
     var defaultReps by remember { mutableIntStateOf(exerciseToEdit?.defaultReps ?: 10) }
-    var defaultDuration by remember { mutableIntStateOf(exerciseToEdit?.defaultDurationSeconds ?: 30) }
+    val initialDuration = exerciseToEdit?.defaultDurationSeconds ?: 30
+    val initialIsMinutes = initialDuration >= 60 && initialDuration % 60 == 0
+    var durationInputText by remember {
+        mutableStateOf(
+            if (initialIsMinutes) (initialDuration / 60).toString() else initialDuration.toString()
+        )
+    }
+    var durationUnit by remember {
+        mutableStateOf(if (initialIsMinutes) "Minutes" else "Seconds")
+    }
+    var durationUnitDropdownExpanded by remember { mutableStateOf(false) }
     var nameError by remember { mutableStateOf<String?>(null) }
 
     // Dynamic custom muscle group adding
@@ -257,7 +273,7 @@ fun AddEditExerciseDialog(
                             )
                             Spacer(modifier = Modifier.width(2.dp))
                             Text(
-                                text = "+ Add Muscle Group",
+                                text = "Add Muscle Group",
                                 style = MaterialTheme.typography.labelSmall,
                                 color = CyanAccent,
                                 fontWeight = FontWeight.SemiBold
@@ -344,17 +360,78 @@ fun AddEditExerciseDialog(
 
                     Row(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        NumberStepper(
-                            label = "Duration (sec)",
-                            value = defaultDuration,
-                            onValueChange = { defaultDuration = it },
-                            minValue = 5,
-                            maxValue = 600,
-                            modifier = Modifier.weight(1f)
+                        // Duration Text Input
+                        OutlinedTextField(
+                            value = durationInputText,
+                            onValueChange = { input ->
+                                if (input.all { it.isDigit() }) {
+                                    durationInputText = input
+                                }
+                            },
+                            modifier = Modifier.weight(1f),
+                            label = { Text("Duration") },
+                            placeholder = { Text("e.g., 30") },
+                            singleLine = true,
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                            shape = RoundedCornerShape(12.dp),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = CategorySprint,
+                                unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant,
+                                focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+                                unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant
+                            )
                         )
+
+                        // Unit Dropdown Menu (Seconds / Minutes)
+                        Box {
+                            OutlinedButton(
+                                onClick = { durationUnitDropdownExpanded = true },
+                                shape = RoundedCornerShape(12.dp),
+                                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 14.dp),
+                                colors = ButtonDefaults.outlinedButtonColors(
+                                    contentColor = MaterialTheme.colorScheme.onSurface
+                                )
+                            ) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                ) {
+                                    Text(
+                                        text = durationUnit,
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        fontWeight = FontWeight.SemiBold
+                                    )
+                                    Icon(
+                                        imageVector = Icons.Default.ArrowDropDown,
+                                        contentDescription = "Select duration unit",
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                }
+                            }
+
+                            DropdownMenu(
+                                expanded = durationUnitDropdownExpanded,
+                                onDismissRequest = { durationUnitDropdownExpanded = false }
+                            ) {
+                                DropdownMenuItem(
+                                    text = { Text("Seconds (s)") },
+                                    onClick = {
+                                        durationUnit = "Seconds"
+                                        durationUnitDropdownExpanded = false
+                                    }
+                                )
+                                DropdownMenuItem(
+                                    text = { Text("Minutes (min)") },
+                                    onClick = {
+                                        durationUnit = "Minutes"
+                                        durationUnitDropdownExpanded = false
+                                    }
+                                )
+                            }
+                        }
                     }
 
                     Spacer(modifier = Modifier.height(8.dp))
@@ -364,27 +441,31 @@ fun AddEditExerciseDialog(
                         horizontalArrangement = Arrangement.spacedBy(6.dp),
                         verticalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
-                        listOf(15, 30, 45, 60, 90, 120).forEach { preset ->
+                        listOf(15 to "Seconds", 30 to "Seconds", 45 to "Seconds", 60 to "Seconds", 90 to "Seconds", 2 to "Minutes").forEach { (presetVal, presetUnit) ->
+                            val isSelected = durationUnit == presetUnit && durationInputText == presetVal.toString()
                             Box(
                                 modifier = Modifier
                                     .clip(RoundedCornerShape(8.dp))
                                     .background(
-                                        if (defaultDuration == preset) CategorySprint.copy(alpha = 0.25f)
+                                        if (isSelected) CategorySprint.copy(alpha = 0.25f)
                                         else MaterialTheme.colorScheme.surfaceVariant
                                     )
                                     .border(
                                         width = 1.dp,
-                                        color = if (defaultDuration == preset) CategorySprint else MaterialTheme.colorScheme.outlineVariant,
+                                        color = if (isSelected) CategorySprint else MaterialTheme.colorScheme.outlineVariant,
                                         shape = RoundedCornerShape(8.dp)
                                     )
-                                    .clickable { defaultDuration = preset }
+                                    .clickable {
+                                        durationInputText = presetVal.toString()
+                                        durationUnit = presetUnit
+                                    }
                                     .padding(horizontal = 10.dp, vertical = 5.dp)
                             ) {
                                 Text(
-                                    text = "${preset}s",
+                                    text = if (presetUnit == "Minutes") "${presetVal}m" else "${presetVal}s",
                                     style = MaterialTheme.typography.labelSmall,
-                                    color = if (defaultDuration == preset) CategorySprint else MaterialTheme.colorScheme.onSurfaceVariant,
-                                    fontWeight = if (defaultDuration == preset) FontWeight.Bold else FontWeight.Normal
+                                    color = if (isSelected) CategorySprint else MaterialTheme.colorScheme.onSurfaceVariant,
+                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
                                 )
                             }
                         }
@@ -428,13 +509,20 @@ fun AddEditExerciseDialog(
                             if (name.trim().isBlank()) {
                                 nameError = "Name cannot be empty"
                             } else {
+                                val parsedDurationValue = durationInputText.toIntOrNull() ?: 30
+                                val calculatedDuration = if (durationUnit == "Minutes") {
+                                    parsedDurationValue * 60
+                                } else {
+                                    parsedDurationValue
+                                }.coerceAtLeast(1)
+
                                 onSave(
                                     name.trim(),
                                     category,
                                     if (isSprint) 1 else defaultSets,
                                     if (isSprint) 1 else defaultReps,
                                     isSprint,
-                                    defaultDuration
+                                    calculatedDuration
                                 )
                             }
                         },
