@@ -61,4 +61,11 @@ interface WorkoutLogDao {
 
     @Query("SELECT COUNT(*) FROM workout_logs WHERE date = :date AND isCompleted = 1")
     fun getCompletedCountForDate(date: String): Flow<Int>
+
+    @Transaction
+    @Query("SELECT * FROM workout_logs ORDER BY date DESC, timestamp DESC")
+    suspend fun getAllLogsOnce(): List<WorkoutLogWithExercise>
+
+    @Query("DELETE FROM workout_logs")
+    suspend fun deleteAllLogs()
 }

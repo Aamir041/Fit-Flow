@@ -12,6 +12,8 @@ import com.fitflow.app.data.local.relation.WorkoutLogWithExercise
 import com.fitflow.app.data.local.model.TemplateBundleExportJson
 import com.fitflow.app.data.local.model.TemplateExportExercise
 import com.fitflow.app.data.local.model.TemplateExportJson
+import com.fitflow.app.data.local.model.HistoryBundleExportJson
+import com.fitflow.app.data.local.model.HistoryLogExport
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.withContext
@@ -66,6 +68,9 @@ interface FitFlowRepository {
     fun getAllLogs(): Flow<List<WorkoutLogWithExercise>>
     fun getCompletedLogs(): Flow<List<WorkoutLogWithExercise>>
     fun getCompletedDates(): Flow<List<String>>
+    suspend fun exportHistoryToJson(): String
+    suspend fun importHistoryFromJson(jsonString: String): Result<Int>
+    suspend fun clearAllHistory()
 
     // Initializer
     suspend fun ensureSeeded()
@@ -332,4 +337,81 @@ class FitFlowRepositoryImpl(
 
     override fun getCompletedDates(): Flow<List<String>> =
         workoutLogDao.getCompletedWorkoutDates()
+
+    override suspend fun exportHistoryToJson(): String = withContext(Dispatchers.IO) {
+        val allLogs = workoutLogDao.getAllLogsOnce()
+        val exportLogs = allLogs.map { logWithEx ->
+            HistoryLogExport(
+                date = logWithEx.log.date,
+                exerciseName = logWithEx.exercise.name,
+                category = logWithEx.exercise.category,
+                actualSets = logWithEx.log.actualSets,
+                actualReps = logWithEx.log.actualReps,
+                actualWeight = logLogExportWeight(logWithEx.log.actualWeight),
+                actualDurationSeconds = logWithEx.log.actualDurationSeconds,
+                isCompleted = logWithEx.log.isCompleted,
+                isSprint = logWithEx.exercise.isSprint,
+                timestamp = logWithEx.log.timestamp
+            )
+        }
+        val bundle = HistoryBundleExportJson(
+            version = 1,
+            app = "FitFlow",
+            exportedAt = System.currentTimeMillis(),
+            logs = exportLogs
+        )
+        bundle.toJsonString()
+    }
+
+    private fun logLogExportWeight(weight: Double): Double = weight
+
+    override suspend fun importHistoryFromJson(jsonString: String): Result<Int> = withContext(Dispatchers.IO) {
+        try {
+            val bundle = HistoryBundleExportJson.fromJsonString(jsonString)
+            if (bundle.logs.isEmpty()) {
+                return@withContext Result.failure(IllegalArgumentException("No history logs found in JSON file"))
+            }
+
+            var importedCount = 0
+            for (exportLog in bundle.logs) {
+                val exerciseName = exportLog.exerciseName.trim()
+                if (exerciseName.isBlank()) continue
+
+                val existingExercise = exerciseDao.getExerciseByName(exerciseName)
+                val exerciseId = if (existingExercise != null) {
+                    existingExercise.id
+                } else {
+                    val newExercise = ExerciseEntity(
+                        name = exerciseName,
+                        category = exportLog.category,
+                        isCustom = true,
+                        isSprint = exportLog.isSprint
+                    )
+                    exerciseDao.insertExercise(newExercise)
+                }
+
+                val logEntity = WorkoutLogEntity(
+                    date = exportLog.date,
+                    exerciseId = exerciseId,
+                    actualSets = exportLog.actualSets,
+                    actualReps = exportLog.actualReps,
+                    actualWeight = exportLog.actualWeight,
+                    actualDurationSeconds = exportLog.actualDurationSeconds,
+                    isCompleted = exportLog.isCompleted,
+                    timestamp = exportLog.timestamp
+                )
+
+                workoutLogDao.insertWorkoutLog(logEntity)
+                importedCount++
+            }
+
+            Result.success(importedCount)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    override suspend fun clearAllHistory() = withContext(Dispatchers.IO) {
+        workoutLogDao.deleteAllLogs()
+    }
 }

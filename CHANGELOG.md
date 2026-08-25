@@ -5,6 +5,12 @@ All notable changes to the Fit-Flow project will be documented in this file.
 ## [Unreleased] - 2026-08-25
 
 ### Added
+- **Workout History Management**:
+  - Implemented **Export History (JSON)** to backup all workout logs to the device storage.
+  - Implemented **Import History (JSON)** to restore workout logs, with automatic custom exercise creation for unrecognized exercises.
+  - Added **Clear All History** functionality with a safety confirmation dialog.
+  - Enhanced [HistoryScreen.kt](file:///d:/Fit-Flow/app/src/main/java/com/fitflow/app/ui/history/HistoryScreen.kt) with a "More Options" menu and Snackbar feedback.
+  - Added [HistoryExportJson.kt](file:///d:/Fit-Flow/app/src/main/java/com/fitflow/app/data/local/model/HistoryExportJson.kt) for robust history data serialization.
 - **Workout Templates Bulk JSON Export & Import Utility**:
   - Updated JSON models in [TemplateExportJson.kt](file:///d:/Fit-Flow/app/src/main/java/com/fitflow/app/data/local/model/TemplateExportJson.kt) to support bundle exports (`TemplateBundleExportJson`) containing all workout templates at once, with backward-compatible single template imports.
   - Implemented **Export All Templates (JSON)** in [TemplatesScreen.kt](file:///d:/Fit-Flow/app/src/main/java/com/fitflow/app/ui/templates/TemplatesScreen.kt) top bar menu to directly save all templates to the device file system via Android's `CreateDocument` storage launcher.
