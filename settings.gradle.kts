@@ -19,5 +19,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "FitFlow-Dev"
+rootProject.name = "FitFlow"
 include(":app")
