@@ -60,6 +60,39 @@ import com.fitflow.app.ui.theme.CrimsonAlert
 import com.fitflow.app.ui.theme.EmeraldPrimary
 import com.fitflow.app.ui.theme.FitFlowTheme
 
+import android.content.Context
+import android.content.Intent
+import android.net.Uri
+import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.material.icons.automirrored.filled.Input
+import androidx.compose.material.icons.filled.FileDownload
+import androidx.compose.material.icons.filled.FileUpload
+import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.Share
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.AnnotatedString
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.launch
+
 @Composable
 fun TemplatesScreen(
     viewModel: TemplatesViewModel,
@@ -68,14 +101,78 @@ fun TemplatesScreen(
     modifier: Modifier = Modifier
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val context = LocalContext.current
+    val snackbarHostState = remember { SnackbarHostState() }
+    var pendingExportJson by remember { mutableStateOf<String?>(null) }
+
+    // Launcher for importing JSON file from device storage
+    val importFileLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri: Uri? ->
+        if (uri != null) {
+            try {
+                val jsonString = context.contentResolver.openInputStream(uri)?.use { stream ->
+                    stream.bufferedReader().use { it.readText() }
+                }
+                if (!jsonString.isNullOrBlank()) {
+                    viewModel.importTemplateFromJson(jsonString)
+                } else {
+                    Toast.makeText(context, "Selected file is empty", Toast.LENGTH_SHORT).show()
+                }
+            } catch (e: Exception) {
+                Toast.makeText(context, "Failed to read file: ${e.localizedMessage}", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
+    // Launcher for saving all templates JSON file directly to device storage
+    val saveFileLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.CreateDocument("application/json")
+    ) { uri: Uri? ->
+        if (uri != null && pendingExportJson != null) {
+            try {
+                context.contentResolver.openOutputStream(uri)?.use { stream ->
+                    stream.bufferedWriter().use { it.write(pendingExportJson!!) }
+                }
+                Toast.makeText(context, "Templates saved successfully!", Toast.LENGTH_LONG).show()
+            } catch (e: Exception) {
+                Toast.makeText(context, "Failed to save file: ${e.localizedMessage}", Toast.LENGTH_SHORT).show()
+            } finally {
+                pendingExportJson = null
+            }
+        }
+    }
+
+    // Handle export event (trigger system Save-As file picker + share intent option)
+    LaunchedEffect(Unit) {
+        viewModel.exportShareEvent.collectLatest { event ->
+            pendingExportJson = event.jsonContent
+            saveFileLauncher.launch("${event.templateName}.json")
+        }
+    }
+
+    LaunchedEffect(uiState.infoMessage, uiState.errorMessage) {
+        uiState.infoMessage?.let {
+            snackbarHostState.showSnackbar(it)
+            viewModel.clearMessages()
+        }
+        uiState.errorMessage?.let {
+            snackbarHostState.showSnackbar(it)
+            viewModel.clearMessages()
+        }
+    }
 
     TemplatesScreenContent(
         uiState = uiState,
+        snackbarHostState = snackbarHostState,
         onCreateTemplate = onCreateTemplate,
         onEditTemplate = onEditTemplate,
         onDeleteTemplate = { viewModel.promptDelete(it) },
         onConfirmDelete = { viewModel.confirmDelete() },
         onDismissDelete = { viewModel.dismissDeletePrompt() },
+        onExportAllTemplates = { viewModel.exportAllTemplates() },
+        onImportFromFile = { importFileLauncher.launch("application/json") },
+        onImportDirectJson = { jsonStr -> viewModel.importTemplateFromJson(jsonStr) },
         modifier = modifier
     )
 }
@@ -83,18 +180,75 @@ fun TemplatesScreen(
 @Composable
 fun TemplatesScreenContent(
     uiState: TemplatesUiState,
+    snackbarHostState: SnackbarHostState,
     onCreateTemplate: () -> Unit,
     onEditTemplate: (Long) -> Unit,
     onDeleteTemplate: (TemplateEntity) -> Unit,
     onConfirmDelete: () -> Unit,
     onDismissDelete: () -> Unit,
+    onExportAllTemplates: () -> Unit,
+    onImportFromFile: () -> Unit,
+    onImportDirectJson: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
+    var isImportDialogOpen by remember { mutableStateOf(false) }
+    var directJsonInput by remember { mutableStateOf("") }
+    val clipboardManager = LocalClipboardManager.current
+    var topMenuExpanded by remember { mutableStateOf(false) }
+
     Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             FitFlowTopBar(
                 title = "Workout Templates",
-                subtitle = "${uiState.templates.size} saved templates"
+                subtitle = "${uiState.templates.size} saved templates",
+                actions = {
+                    Box {
+                        IconButton(onClick = { topMenuExpanded = true }) {
+                            Icon(
+                                imageVector = Icons.Default.MoreVert,
+                                contentDescription = "More Options",
+                                tint = MaterialTheme.colorScheme.onBackground
+                            )
+                        }
+                        DropdownMenu(
+                            expanded = topMenuExpanded,
+                            onDismissRequest = { topMenuExpanded = false }
+                        ) {
+                            DropdownMenuItem(
+                                text = { Text("Export All Templates (JSON)") },
+                                leadingIcon = {
+                                    Icon(Icons.Default.FileDownload, contentDescription = null, modifier = Modifier.size(18.dp), tint = EmeraldPrimary)
+                                },
+                                onClick = {
+                                    topMenuExpanded = false
+                                    onExportAllTemplates()
+                                }
+                            )
+                            DropdownMenuItem(
+                                text = { Text("Import Templates File") },
+                                leadingIcon = {
+                                    Icon(Icons.Default.FileUpload, contentDescription = null, modifier = Modifier.size(18.dp))
+                                },
+                                onClick = {
+                                    topMenuExpanded = false
+                                    onImportFromFile()
+                                }
+                            )
+                            DropdownMenuItem(
+                                text = { Text("Paste Template(s) JSON") },
+                                leadingIcon = {
+                                    Icon(Icons.AutoMirrored.Filled.Input, contentDescription = null, modifier = Modifier.size(18.dp))
+                                },
+                                onClick = {
+                                    topMenuExpanded = false
+                                    directJsonInput = clipboardManager.getText()?.text ?: ""
+                                    isImportDialogOpen = true
+                                }
+                            )
+                        }
+                    }
+                }
             )
         },
         floatingActionButton = {
@@ -130,11 +284,25 @@ fun TemplatesScreenContent(
             ) {
                 EmptyStateCard(
                     title = "No Templates Created Yet",
-                    description = "Templates let you design custom workout splits like Push Day, Pull Day, or Full Body. Create your first template now!",
+                    description = "Templates let you design custom workout splits like Push Day, Pull Day, or Full Body. Create your first template or import one from JSON!",
                     icon = Icons.Default.Layers,
                     actionButtonText = "+ Create First Template",
                     onActionClick = onCreateTemplate
                 )
+                Spacer(modifier = Modifier.height(12.dp))
+                OutlinedButton(
+                    onClick = onImportFromFile,
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.FileUpload,
+                        contentDescription = null,
+                        modifier = Modifier.size(16.dp),
+                        tint = EmeraldPrimary
+                    )
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text("Import Template from JSON")
+                }
             }
         } else {
             LazyColumn(
@@ -170,6 +338,62 @@ fun TemplatesScreenContent(
                 onDismiss = onDismissDelete
             )
         }
+
+        // Import Paste JSON Dialog
+        if (isImportDialogOpen) {
+            AlertDialog(
+                onDismissRequest = { isImportDialogOpen = false },
+                title = {
+                    Text(
+                        text = "Import Template(s) JSON",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold
+                    )
+                },
+                text = {
+                    Column {
+                        Text(
+                            text = "Paste the exported templates JSON below:",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        OutlinedTextField(
+                            value = directJsonInput,
+                            onValueChange = { directJsonInput = it },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(160.dp),
+                            placeholder = { Text("{\n  \"templates\": [\n    {\n      \"templateName\": \"...\",\n      \"exercises\": [...]\n    }\n  ]\n}") },
+                            shape = RoundedCornerShape(12.dp),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = EmeraldPrimary,
+                                unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant
+                            )
+                        )
+                    }
+                },
+                confirmButton = {
+                    Button(
+                        onClick = {
+                            val trimmed = directJsonInput.trim()
+                            if (trimmed.isNotBlank()) {
+                                isImportDialogOpen = false
+                                onImportDirectJson(trimmed)
+                            }
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = EmeraldPrimary)
+                    ) {
+                        Text("Import")
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { isImportDialogOpen = false }) {
+                        Text("Cancel")
+                    }
+                }
+            )
+        }
     }
 }
 
@@ -196,7 +420,7 @@ fun TemplateItemCard(
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
-            // Top Row: Title, Exercise Count, and Delete Button
+            // Top Row: Title, Exercise Count, and Action Buttons
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
@@ -319,11 +543,15 @@ fun TemplatesScreenPreview() {
                 templates = listOf(sampleTemplate),
                 isLoading = false
             ),
+            snackbarHostState = SnackbarHostState(),
             onCreateTemplate = {},
             onEditTemplate = {},
             onDeleteTemplate = {},
             onConfirmDelete = {},
-            onDismissDelete = {}
+            onDismissDelete = {},
+            onExportAllTemplates = {},
+            onImportFromFile = {},
+            onImportDirectJson = {}
         )
     }
 }

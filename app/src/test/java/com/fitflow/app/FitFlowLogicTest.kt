@@ -214,4 +214,96 @@ class FitFlowLogicTest {
         // (4 * 8 * 100.0) + (3 * 10 * 50.0) = 3200 + 1500 = 4700.0, sprint is not counted
         assertEquals(4700.0, totalVolume, 0.001)
     }
+
+    @Test
+    fun testTemplateBundleExportJsonSerializationAndDeserialization() {
+        val exportExercises1 = listOf(
+            com.fitflow.app.data.local.model.TemplateExportExercise(
+                exerciseName = "Barbell Bench Press",
+                category = "Chest",
+                targetSets = 4,
+                targetReps = 8,
+                targetDurationSeconds = 30,
+                restTimeSeconds = 90,
+                isSprint = false,
+                orderIndex = 0
+            )
+        )
+        val exportExercises2 = listOf(
+            com.fitflow.app.data.local.model.TemplateExportExercise(
+                exerciseName = "Deadlift",
+                category = "Back",
+                targetSets = 3,
+                targetReps = 6,
+                targetDurationSeconds = 30,
+                restTimeSeconds = 120,
+                isSprint = false,
+                orderIndex = 0
+            )
+        )
+
+        val bundle = com.fitflow.app.data.local.model.TemplateBundleExportJson(
+            version = 1,
+            app = "FitFlow",
+            templates = listOf(
+                com.fitflow.app.data.local.model.TemplateExportJson(
+                    templateName = "Chest Day",
+                    exercises = exportExercises1
+                ),
+                com.fitflow.app.data.local.model.TemplateExportJson(
+                    templateName = "Back Day",
+                    exercises = exportExercises2
+                )
+            )
+        )
+
+        val jsonString = bundle.toJsonString()
+        assertTrue(jsonString.contains("Chest Day"))
+        assertTrue(jsonString.contains("Back Day"))
+
+        val parsed = com.fitflow.app.data.local.model.TemplateBundleExportJson.fromJsonString(jsonString)
+        assertEquals(2, parsed.templates.size)
+        assertEquals("Chest Day", parsed.templates[0].templateName)
+        assertEquals("Back Day", parsed.templates[1].templateName)
+        assertEquals("Barbell Bench Press", parsed.templates[0].exercises[0].exerciseName)
+        assertEquals("Deadlift", parsed.templates[1].exercises[0].exerciseName)
+    }
+
+    @Test
+    fun testTemplateBundleBackwardCompatibilitySingleTemplateJson() {
+        val singleJson = """
+            {
+              "templateName": "Full Body Power",
+              "exercises": [
+                {
+                  "exerciseName": "Squat",
+                  "category": "Legs",
+                  "targetSets": 5,
+                  "targetReps": 5
+                }
+              ]
+            }
+        """.trimIndent()
+
+        val parsed = com.fitflow.app.data.local.model.TemplateBundleExportJson.fromJsonString(singleJson)
+        assertEquals(1, parsed.templates.size)
+        assertEquals("Full Body Power", parsed.templates[0].templateName)
+        assertEquals(1, parsed.templates[0].exercises.size)
+        assertEquals("Squat", parsed.templates[0].exercises[0].exerciseName)
+    }
+
+    @Test
+    fun testTemplateNameUniquenessRule() {
+        val existingNames = listOf("Push Day", "Pull Day", "Leg Day")
+
+        fun isUnique(name: String): Boolean {
+            val trimmed = name.trim().lowercase()
+            return existingNames.none { it.trim().lowercase() == trimmed }
+        }
+
+        assertFalse(isUnique("Push Day"))
+        assertFalse(isUnique("  push day  "))
+        assertFalse(isUnique("PULL DAY"))
+        assertTrue(isUnique("Upper Body Power"))
+    }
 }

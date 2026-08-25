@@ -305,6 +305,18 @@ class TemplateEditViewModel(
 
         viewModelScope.launch {
             _formState.update { it.copy(isLoading = true) }
+
+            val isUnique = repository.isTemplateNameUnique(name, initialTemplateId ?: 0L)
+            if (!isUnique) {
+                _formState.update {
+                    it.copy(
+                        isLoading = false,
+                        nameError = "A template with this name already exists"
+                    )
+                }
+                return@launch
+            }
+
             val templateEntity = TemplateEntity(
                 id = initialTemplateId ?: 0L,
                 name = name

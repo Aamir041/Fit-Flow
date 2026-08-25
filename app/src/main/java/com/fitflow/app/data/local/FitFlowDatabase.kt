@@ -26,7 +26,7 @@ import kotlinx.coroutines.launch
         DayAssignmentEntity::class,
         WorkoutLogEntity::class
     ],
-    version = 2,
+    version = 3,
     exportSchema = false
 )
 abstract class FitFlowDatabase : RoomDatabase() {
@@ -45,7 +45,7 @@ abstract class FitFlowDatabase : RoomDatabase() {
                 val instance = Room.databaseBuilder(
                     context.applicationContext,
                     FitFlowDatabase::class.java,
-                    "fitflow2.db"
+                    "fitflow3.db"
                 )
                     .fallbackToDestructiveMigration()
                     .addCallback(DatabaseCallback(scope))

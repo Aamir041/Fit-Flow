@@ -21,6 +21,9 @@ interface ExerciseDao {
     @Query("SELECT * FROM exercises WHERE id = :id LIMIT 1")
     suspend fun getExerciseById(id: Long): ExerciseEntity?
 
+    @Query("SELECT * FROM exercises WHERE LOWER(TRIM(name)) = LOWER(TRIM(:name)) LIMIT 1")
+    suspend fun getExerciseByName(name: String): ExerciseEntity?
+
     @Query("SELECT * FROM exercises WHERE id = :id LIMIT 1")
     fun getExerciseByIdFlow(id: Long): Flow<ExerciseEntity?>
 

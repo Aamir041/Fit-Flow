@@ -21,6 +21,9 @@ interface TemplateDao {
     @Query("SELECT * FROM templates WHERE id = :id LIMIT 1")
     suspend fun getTemplateById(id: Long): TemplateEntity?
 
+    @Query("SELECT * FROM templates WHERE LOWER(TRIM(name)) = LOWER(TRIM(:name)) LIMIT 1")
+    suspend fun getTemplateByName(name: String): TemplateEntity?
+
     @Query("SELECT * FROM templates WHERE id = :id LIMIT 1")
     fun getTemplateByIdFlow(id: Long): Flow<TemplateEntity?>
 
@@ -35,6 +38,10 @@ interface TemplateDao {
     @Transaction
     @Query("SELECT * FROM templates ORDER BY createdDate DESC")
     fun getAllTemplatesWithExercises(): Flow<List<TemplateWithExercises>>
+
+    @Transaction
+    @Query("SELECT * FROM templates ORDER BY createdDate DESC")
+    suspend fun getAllTemplatesWithExercisesOnce(): List<TemplateWithExercises>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertTemplate(template: TemplateEntity): Long

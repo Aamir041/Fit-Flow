@@ -9,6 +9,9 @@ import com.fitflow.app.data.local.entity.WorkoutLogEntity
 import com.fitflow.app.data.local.relation.DayWithTemplate
 import com.fitflow.app.data.local.relation.TemplateWithExercises
 import com.fitflow.app.data.local.relation.WorkoutLogWithExercise
+import com.fitflow.app.data.local.model.TemplateBundleExportJson
+import com.fitflow.app.data.local.model.TemplateExportExercise
+import com.fitflow.app.data.local.model.TemplateExportJson
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.withContext
@@ -20,6 +23,7 @@ interface FitFlowRepository {
     fun searchExercises(query: String): Flow<List<ExerciseEntity>>
     fun getExerciseByIdFlow(id: Long): Flow<ExerciseEntity?>
     suspend fun getExerciseById(id: Long): ExerciseEntity?
+    suspend fun getExerciseByName(name: String): ExerciseEntity?
     suspend fun insertExercise(exercise: ExerciseEntity): Long
     suspend fun updateExercise(exercise: ExerciseEntity)
     suspend fun deleteExercise(exercise: ExerciseEntity)
@@ -28,11 +32,16 @@ interface FitFlowRepository {
     fun getAllTemplatesWithExercises(): Flow<List<TemplateWithExercises>>
     fun getTemplateWithExercises(id: Long): Flow<TemplateWithExercises?>
     suspend fun getTemplateWithExercisesOnce(id: Long): TemplateWithExercises?
+    suspend fun getAllTemplatesWithExercisesOnce(): List<TemplateWithExercises>
+    suspend fun getTemplateByName(name: String): TemplateEntity?
+    suspend fun isTemplateNameUnique(name: String, excludeTemplateId: Long = 0L): Boolean
     suspend fun saveTemplateWithExercises(
         template: TemplateEntity,
         exercises: List<TemplateExerciseEntity>
     ): Long
     suspend fun deleteTemplate(template: TemplateEntity)
+    suspend fun exportAllTemplatesToJson(): String
+    suspend fun importTemplateBundleFromJson(jsonString: String): Result<Int>
 
     // Day Assignments / Schedule
     fun getAllDayAssignments(): Flow<List<DayWithTemplate>>
@@ -92,6 +101,10 @@ class FitFlowRepositoryImpl(
         exerciseDao.getExerciseById(id)
     }
 
+    override suspend fun getExerciseByName(name: String): ExerciseEntity? = withContext(Dispatchers.IO) {
+        exerciseDao.getExerciseByName(name)
+    }
+
     override suspend fun insertExercise(exercise: ExerciseEntity): Long = withContext(Dispatchers.IO) {
         exerciseDao.insertExercise(exercise)
     }
@@ -115,6 +128,19 @@ class FitFlowRepositoryImpl(
         templateDao.getTemplateWithExercisesOnce(id)
     }
 
+    override suspend fun getAllTemplatesWithExercisesOnce(): List<TemplateWithExercises> = withContext(Dispatchers.IO) {
+        templateDao.getAllTemplatesWithExercisesOnce()
+    }
+
+    override suspend fun getTemplateByName(name: String): TemplateEntity? = withContext(Dispatchers.IO) {
+        templateDao.getTemplateByName(name)
+    }
+
+    override suspend fun isTemplateNameUnique(name: String, excludeTemplateId: Long): Boolean = withContext(Dispatchers.IO) {
+        val existing = templateDao.getTemplateByName(name)
+        existing == null || (excludeTemplateId > 0L && existing.id == excludeTemplateId)
+    }
+
     override suspend fun saveTemplateWithExercises(
         template: TemplateEntity,
         exercises: List<TemplateExerciseEntity>
@@ -124,6 +150,116 @@ class FitFlowRepositoryImpl(
 
     override suspend fun deleteTemplate(template: TemplateEntity) = withContext(Dispatchers.IO) {
         templateDao.deleteTemplateAndExercises(template)
+    }
+
+    override suspend fun exportAllTemplatesToJson(): String = withContext(Dispatchers.IO) {
+        val allTemplates = templateDao.getAllTemplatesWithExercisesOnce()
+        val exportTemplates = allTemplates.map { templateWithEx ->
+            val exportExercises = templateWithEx.exercises
+                .sortedBy { it.templateExercise.orderIndex }
+                .map {
+                    TemplateExportExercise(
+                        exerciseName = it.exercise.name,
+                        category = it.exercise.category,
+                        targetSets = it.templateExercise.targetSets,
+                        targetReps = it.templateExercise.targetReps,
+                        targetDurationSeconds = it.templateExercise.targetDurationSeconds,
+                        restTimeSeconds = it.templateExercise.restTimeSeconds,
+                        isSprint = it.exercise.isSprint,
+                        orderIndex = it.templateExercise.orderIndex
+                    )
+                }
+            TemplateExportJson(
+                templateName = templateWithEx.template.name,
+                exercises = exportExercises
+            )
+        }
+        val bundle = TemplateBundleExportJson(
+            version = 1,
+            app = "FitFlow",
+            exportedAt = System.currentTimeMillis(),
+            templates = exportTemplates
+        )
+        bundle.toJsonString()
+    }
+
+    override suspend fun importTemplateBundleFromJson(jsonString: String): Result<Int> = withContext(Dispatchers.IO) {
+        try {
+            val bundle = TemplateBundleExportJson.fromJsonString(jsonString)
+            if (bundle.templates.isEmpty()) {
+                return@withContext Result.failure(IllegalArgumentException("No templates found in JSON file"))
+            }
+
+            var importedCount = 0
+            val skippedDuplicates = mutableListOf<String>()
+
+            for (templateExport in bundle.templates) {
+                val templateName = templateExport.templateName.trim()
+                if (templateName.isBlank()) continue
+                if (templateExport.exercises.isEmpty()) continue
+
+                // Check uniqueness: if already exists, skip
+                if (!isTemplateNameUnique(templateName)) {
+                    skippedDuplicates.add(templateName)
+                    continue
+                }
+
+                val templateEntity = TemplateEntity(
+                    name = templateName,
+                    createdDate = System.currentTimeMillis()
+                )
+
+                val templateExerciseEntities = mutableListOf<TemplateExerciseEntity>()
+
+                templateExport.exercises.forEachIndexed { index, exportEx ->
+                    val trimmedExerciseName = exportEx.exerciseName.trim()
+                    if (trimmedExerciseName.isNotBlank()) {
+                        val existingExercise = exerciseDao.getExerciseByName(trimmedExerciseName)
+                        val exerciseId = if (existingExercise != null) {
+                            existingExercise.id
+                        } else {
+                            val newExercise = ExerciseEntity(
+                                name = trimmedExerciseName,
+                                category = exportEx.category.ifBlank { "General" },
+                                defaultSets = exportEx.targetSets,
+                                defaultReps = exportEx.targetReps,
+                                isCustom = true,
+                                isSprint = exportEx.isSprint,
+                                defaultDurationSeconds = exportEx.targetDurationSeconds
+                            )
+                            exerciseDao.insertExercise(newExercise)
+                        }
+
+                        templateExerciseEntities.add(
+                            TemplateExerciseEntity(
+                                templateId = 0L,
+                                exerciseId = exerciseId,
+                                targetSets = exportEx.targetSets,
+                                targetReps = exportEx.targetReps,
+                                targetDurationSeconds = exportEx.targetDurationSeconds,
+                                restTimeSeconds = exportEx.restTimeSeconds,
+                                orderIndex = index
+                            )
+                        )
+                    }
+                }
+
+                if (templateExerciseEntities.isNotEmpty()) {
+                    templateDao.saveTemplateWithExercises(templateEntity, templateExerciseEntities)
+                    importedCount++
+                }
+            }
+
+            if (importedCount == 0 && skippedDuplicates.isNotEmpty()) {
+                return@withContext Result.failure(
+                    IllegalArgumentException("All templates already exist: ${skippedDuplicates.joinToString(", ")}")
+                )
+            }
+
+            Result.success(importedCount)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
     }
 
     // Day Assignments
