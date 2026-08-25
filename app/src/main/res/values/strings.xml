@@ -1,0 +1,8 @@
+<resources>
+    <string name="app_name">FitFlow</string>
+    <string name="nav_home">Today</string>
+    <string name="nav_templates">Templates</string>
+    <string name="nav_schedule">Schedule</string>
+    <string name="nav_history">History</string>
+    <string name="nav_exercises">Exercises</string>
+</resources>
