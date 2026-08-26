@@ -60,6 +60,13 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.filled.ChevronLeft
+import androidx.compose.material.icons.filled.ChevronRight
+import androidx.compose.ui.text.style.TextAlign
 import com.fitflow.app.data.local.entity.ExerciseEntity
 import com.fitflow.app.data.local.entity.WorkoutLogEntity
 import com.fitflow.app.data.local.relation.WorkoutLogWithExercise
@@ -68,9 +75,12 @@ import com.fitflow.app.ui.components.EmptyStateCard
 import com.fitflow.app.ui.components.FitFlowTopBar
 import com.fitflow.app.ui.components.SprintBadge
 import com.fitflow.app.ui.theme.CyanAccent
+import com.fitflow.app.ui.theme.EmeraldDark
+import com.fitflow.app.ui.theme.EmeraldLight
 import com.fitflow.app.ui.theme.EmeraldPrimary
 import com.fitflow.app.ui.theme.FitFlowTheme
 import java.time.LocalDate
+import java.time.YearMonth
 import java.time.format.DateTimeFormatter
 import java.time.format.DateTimeParseException
 
@@ -148,6 +158,8 @@ fun HistoryScreenContent(
     modifier: Modifier = Modifier
 ) {
     var showMenu by remember { mutableStateOf(false) }
+    var selectedMonth by remember { mutableStateOf(YearMonth.now()) }
+    var selectedDateForDetails by remember { mutableStateOf<String?>(null) }
 
     Scaffold(
         topBar = {
@@ -212,21 +224,6 @@ fun HistoryScreenContent(
             ) {
                 CircularProgressIndicator(color = EmeraldPrimary)
             }
-        } else if (uiState.groupedByDate.isEmpty()) {
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(innerPadding)
-                    .padding(20.dp),
-                verticalArrangement = Arrangement.Center,
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                EmptyStateCard(
-                    title = "No Logged Workouts Yet",
-                    description = "When you complete exercises on the Today screen, your logged sets, reps, and weights will show up here.",
-                    icon = Icons.Default.History
-                )
-            }
         } else {
             LazyColumn(
                 modifier = Modifier
@@ -256,24 +253,16 @@ fun HistoryScreenContent(
                     }
                 }
 
-                // Grouped Log Days
-                items(
-                    items = uiState.groupedByDate.entries.toList(),
-                    key = { it.key }
-                ) { entry ->
-                    val dateString = entry.key
-                    val logsForDay = entry.value
-
-                    val formattedDate = try {
-                        val parsed = LocalDate.parse(dateString, DateTimeFormatter.ISO_LOCAL_DATE)
-                        parsed.format(DateTimeFormatter.ofPattern("EEEE, MMMM d, yyyy"))
-                    } catch (e: Exception) {
-                        dateString
-                    }
-
-                    WorkoutDateSessionCard(
-                        formattedDate = formattedDate,
-                        logs = logsForDay
+                // Monthly GitHub-style Activity Contribution Heatmap
+                item {
+                    MonthContributionHeatmap(
+                        yearMonth = selectedMonth,
+                        groupedByDate = uiState.groupedByDate,
+                        onPreviousMonth = { selectedMonth = selectedMonth.minusMonths(1) },
+                        onNextMonth = { selectedMonth = selectedMonth.plusMonths(1) },
+                        onDateSelected = { dateKey ->
+                            selectedDateForDetails = dateKey
+                        }
                     )
                 }
 
@@ -282,7 +271,363 @@ fun HistoryScreenContent(
                 }
             }
         }
+
+        // Dialog showing history of exercises performed on selected date
+        selectedDateForDetails?.let { dateKey ->
+            val logsForDay = uiState.groupedByDate[dateKey] ?: emptyList()
+            DayWorkoutDetailsDialog(
+                dateKey = dateKey,
+                logs = logsForDay,
+                onDismiss = { selectedDateForDetails = null }
+            )
+        }
     }
+}
+
+@Composable
+fun MonthContributionHeatmap(
+    yearMonth: YearMonth,
+    groupedByDate: Map<String, List<WorkoutLogWithExercise>>,
+    onPreviousMonth: () -> Unit,
+    onNextMonth: () -> Unit,
+    onDateSelected: (String) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val monthTitle = yearMonth.format(DateTimeFormatter.ofPattern("MMMM yyyy"))
+    val daysInMonth = yearMonth.lengthOfMonth()
+    val today = LocalDate.now()
+    val isCurrentMonth = yearMonth == YearMonth.from(today)
+
+    // Calculate workouts count in this month
+    val monthActiveDaysCount = (1..daysInMonth).count { day ->
+        val dateKey = String.format("%04d-%02d-%02d", yearMonth.year, yearMonth.monthValue, day)
+        groupedByDate.containsKey(dateKey) && groupedByDate[dateKey]?.isNotEmpty() == true
+    }
+
+    Card(
+        modifier = modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(20.dp))
+            .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(20.dp)),
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            // Month Header with Prev/Next controls
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Column {
+                    Text(
+                        text = "CONSISTENCY HEATMAP",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = EmeraldPrimary,
+                        letterSpacing = 1.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Text(
+                        text = monthTitle,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                }
+
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    IconButton(
+                        onClick = onPreviousMonth,
+                        modifier = Modifier.size(32.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.ChevronLeft,
+                            contentDescription = "Previous Month",
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    IconButton(
+                        onClick = onNextMonth,
+                        modifier = Modifier.size(32.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.ChevronRight,
+                            contentDescription = "Next Month",
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(6.dp))
+
+            Text(
+                text = "$monthActiveDaysCount active ${if (monthActiveDaysCount == 1) "day" else "days"} • Tap any date to view workout",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+
+            Spacer(modifier = Modifier.height(14.dp))
+
+            // GitHub style grid of squares (equal to days in month, 7 columns for days of week)
+            val columns = 7
+            val totalRows = (daysInMonth + columns - 1) / columns
+
+            Column(
+                verticalArrangement = Arrangement.spacedBy(6.dp),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                for (row in 0 until totalRows) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        for (col in 0 until columns) {
+                            val dayNumber = row * columns + col + 1
+                            if (dayNumber <= daysInMonth) {
+                                val dateKey = String.format(
+                                    "%04d-%02d-%02d",
+                                    yearMonth.year,
+                                    yearMonth.monthValue,
+                                    dayNumber
+                                )
+                                val logsForDay = groupedByDate[dateKey]
+                                val workoutCount = logsForDay?.size ?: 0
+                                val isLit = workoutCount > 0
+                                val isToday = isCurrentMonth && dayNumber == today.dayOfMonth
+
+                                val squareBgColor = when {
+                                    workoutCount >= 4 -> EmeraldPrimary
+                                    workoutCount in 2..3 -> EmeraldLight
+                                    workoutCount == 1 -> EmeraldLight.copy(alpha = 0.65f)
+                                    else -> MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f)
+                                }
+
+                                val squareBorderColor = when {
+                                    isToday -> CyanAccent
+                                    isLit -> EmeraldPrimary.copy(alpha = 0.8f)
+                                    else -> MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)
+                                }
+
+                                val textColor = when {
+                                    workoutCount >= 2 -> MaterialTheme.colorScheme.background
+                                    isLit -> MaterialTheme.colorScheme.onSurface
+                                    else -> MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                                }
+
+                                Box(
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .height(38.dp)
+                                        .clip(RoundedCornerShape(8.dp))
+                                        .background(squareBgColor)
+                                        .border(
+                                            width = if (isToday) 1.5.dp else 1.dp,
+                                            color = squareBorderColor,
+                                            shape = RoundedCornerShape(8.dp)
+                                        )
+                                        .clickable {
+                                            onDateSelected(dateKey)
+                                        },
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text(
+                                        text = dayNumber.toString(),
+                                        style = MaterialTheme.typography.labelSmall,
+                                        fontWeight = if (isLit || isToday) FontWeight.Bold else FontWeight.Normal,
+                                        color = textColor,
+                                        fontSize = 11.sp,
+                                        textAlign = TextAlign.Center
+                                    )
+                                }
+                            } else {
+                                Spacer(modifier = Modifier.weight(1f))
+                            }
+                        }
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // Heatmap Legend
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.End
+            ) {
+                Text(
+                    text = "Less",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    fontSize = 10.sp
+                )
+                Spacer(modifier = Modifier.width(4.dp))
+                Box(
+                    modifier = Modifier
+                        .size(10.dp)
+                        .clip(RoundedCornerShape(2.dp))
+                        .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f))
+                        .border(0.5.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(2.dp))
+                )
+                Spacer(modifier = Modifier.width(3.dp))
+                Box(
+                    modifier = Modifier
+                        .size(10.dp)
+                        .clip(RoundedCornerShape(2.dp))
+                        .background(EmeraldLight.copy(alpha = 0.65f))
+                )
+                Spacer(modifier = Modifier.width(3.dp))
+                Box(
+                    modifier = Modifier
+                        .size(10.dp)
+                        .clip(RoundedCornerShape(2.dp))
+                        .background(EmeraldLight)
+                )
+                Spacer(modifier = Modifier.width(3.dp))
+                Box(
+                    modifier = Modifier
+                        .size(10.dp)
+                        .clip(RoundedCornerShape(2.dp))
+                        .background(EmeraldPrimary)
+                )
+                Spacer(modifier = Modifier.width(4.dp))
+                Text(
+                    text = "More",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    fontSize = 10.sp
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun DayWorkoutDetailsDialog(
+    dateKey: String,
+    logs: List<WorkoutLogWithExercise>,
+    onDismiss: () -> Unit
+) {
+    val formattedDate = try {
+        val parsed = LocalDate.parse(dateKey, DateTimeFormatter.ISO_LOCAL_DATE)
+        parsed.format(DateTimeFormatter.ofPattern("EEEE, MMMM d, yyyy"))
+    } catch (e: Exception) {
+        dateKey
+    }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Column {
+                Text(
+                    text = formattedDate,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Spacer(modifier = Modifier.height(2.dp))
+                Text(
+                    text = if (logs.isEmpty()) "Rest day / No workouts logged" else "${logs.size} movements completed",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = if (logs.isEmpty()) MaterialTheme.colorScheme.onSurfaceVariant else EmeraldPrimary,
+                    fontWeight = FontWeight.SemiBold
+                )
+            }
+        },
+        text = {
+            if (logs.isEmpty()) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 16.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "No workout logs recorded for this day.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        textAlign = TextAlign.Center
+                    )
+                }
+            } else {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    logs.forEach { item ->
+                        val weightFormatted = if (item.log.actualWeight % 1.0 == 0.0) {
+                            "${item.log.actualWeight.toInt()}"
+                        } else {
+                            "${item.log.actualWeight}"
+                        }
+
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+                                .border(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f), RoundedCornerShape(12.dp))
+                                .padding(12.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Text(
+                                        text = item.exercise.name,
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.onSurface
+                                    )
+                                    if (item.exercise.isSprint) {
+                                        Spacer(modifier = Modifier.width(6.dp))
+                                        SprintBadge(durationSeconds = item.log.actualDurationSeconds)
+                                    }
+                                }
+                                Spacer(modifier = Modifier.height(4.dp))
+                                CategoryBadge(category = item.exercise.category)
+                            }
+
+                            Column(horizontalAlignment = Alignment.End) {
+                                if (item.exercise.isSprint) {
+                                    Text(
+                                        text = "${item.log.actualDurationSeconds}s sprint",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.onSurface
+                                    )
+                                } else {
+                                    Text(
+                                        text = "${item.log.actualSets} sets × ${item.log.actualReps} reps",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.onSurface
+                                    )
+                                    if (item.log.actualWeight > 0) {
+                                        Text(
+                                            text = "$weightFormatted kg",
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = CyanAccent
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Close", color = EmeraldPrimary, fontWeight = FontWeight.Bold)
+            }
+        },
+        shape = RoundedCornerShape(20.dp),
+        containerColor = MaterialTheme.colorScheme.surface
+    )
 }
 
 @Composable
@@ -319,115 +664,6 @@ fun StatMetricCard(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 fontSize = 10.sp
             )
-        }
-    }
-}
-
-@Composable
-fun WorkoutDateSessionCard(
-    formattedDate: String,
-    logs: List<WorkoutLogWithExercise>,
-    modifier: Modifier = Modifier
-) {
-    Card(
-        modifier = modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(18.dp))
-            .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(18.dp)),
-        shape = RoundedCornerShape(18.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
-    ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            // Date Header
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Box(
-                        modifier = Modifier
-                            .size(10.dp)
-                            .clip(CircleShape)
-                            .background(EmeraldPrimary)
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        text = formattedDate,
-                        style = MaterialTheme.typography.titleSmall,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                }
-                Text(
-                    text = "${logs.size} movements",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = EmeraldPrimary,
-                    fontWeight = FontWeight.SemiBold
-                )
-            }
-
-            Spacer(modifier = Modifier.height(12.dp))
-            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
-            Spacer(modifier = Modifier.height(10.dp))
-
-            // Log details
-            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                logs.forEach { item ->
-                    val weightFormatted = if (item.log.actualWeight % 1.0 == 0.0) {
-                        "${item.log.actualWeight.toInt()}"
-                    } else {
-                        "${item.log.actualWeight}"
-                    }
-
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Column(modifier = Modifier.weight(1f)) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Text(
-                                    text = item.exercise.name,
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    fontWeight = FontWeight.SemiBold,
-                                    color = MaterialTheme.colorScheme.onSurface
-                                )
-                                if (item.exercise.isSprint) {
-                                    Spacer(modifier = Modifier.width(6.dp))
-                                    SprintBadge(durationSeconds = item.log.actualDurationSeconds)
-                                }
-                            }
-                            CategoryBadge(category = item.exercise.category)
-                        }
-
-                        Column(horizontalAlignment = Alignment.End) {
-                            if (item.exercise.isSprint) {
-                                Text(
-                                    text = "${item.log.actualDurationSeconds}s sprint",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    fontWeight = FontWeight.Bold,
-                                    color = MaterialTheme.colorScheme.onSurface
-                                )
-                            } else {
-                                Text(
-                                    text = "${item.log.actualSets} sets × ${item.log.actualReps} reps",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    fontWeight = FontWeight.Bold,
-                                    color = MaterialTheme.colorScheme.onSurface
-                                )
-                                if (item.log.actualWeight > 0) {
-                                    Text(
-                                        text = "$weightFormatted kg",
-                                        style = MaterialTheme.typography.labelSmall,
-                                        color = CyanAccent
-                                    )
-                                }
-                            }
-                        }
-                    }
-                }
-            }
         }
     }
 }
