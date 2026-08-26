@@ -39,7 +39,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.fitflow.app.ui.components.CategoryBadge
-import com.fitflow.app.ui.components.DecimalStepper
 import com.fitflow.app.ui.components.NumberStepper
 import com.fitflow.app.ui.components.SprintBadge
 import com.fitflow.app.ui.theme.CyanAccent
@@ -185,7 +184,7 @@ fun ExerciseLogCard(
             } else {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
+                    horizontalArrangement = Arrangement.spacedBy(16.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     NumberStepper(
@@ -208,18 +207,6 @@ fun ExerciseLogCard(
                         minValue = 1,
                         maxValue = 100,
                         modifier = Modifier.weight(1f)
-                    )
-
-                    DecimalStepper(
-                        label = "Weight",
-                        value = item.actualWeight,
-                        onValueChange = { newWeight ->
-                            onValuesChanged(item.actualSets, item.actualReps, newWeight)
-                        },
-                        minValue = 0.0,
-                        maxValue = 500.0,
-                        step = 2.5,
-                        modifier = Modifier.weight(1.3f)
                     )
                 }
             }

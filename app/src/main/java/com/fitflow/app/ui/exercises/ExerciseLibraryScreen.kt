@@ -23,7 +23,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.DeleteOutline
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.ListAlt
 import androidx.compose.material.icons.filled.Search
@@ -215,8 +214,7 @@ fun ExerciseLibraryScreenContent(
                     ) { exercise ->
                         ExerciseCatalogItemCard(
                             exercise = exercise,
-                            onEdit = { onOpenEditDialog(exercise) },
-                            onDelete = { onPromptDelete(exercise) }
+                            onEdit = { onOpenEditDialog(exercise) }
                         )
                     }
 
@@ -233,6 +231,9 @@ fun ExerciseLibraryScreenContent(
                 exerciseToEdit = uiState.exerciseToEdit,
                 existingCategories = uiState.availableCategories,
                 onSave = onSaveExercise,
+                onDelete = if (uiState.exerciseToEdit != null && uiState.exerciseToEdit.isCustom) {
+                    { onPromptDelete(uiState.exerciseToEdit) }
+                } else null,
                 onDismiss = onCloseDialog
             )
         }
@@ -253,7 +254,6 @@ fun ExerciseLibraryScreenContent(
 fun ExerciseCatalogItemCard(
     exercise: ExerciseEntity,
     onEdit: () -> Unit,
-    onDelete: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Card(
@@ -264,7 +264,8 @@ fun ExerciseCatalogItemCard(
                 1.dp,
                 if (exercise.isSprint) CategorySprint.copy(alpha = 0.4f) else MaterialTheme.colorScheme.outlineVariant,
                 RoundedCornerShape(16.dp)
-            ),
+            )
+            .clickable(onClick = onEdit),
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
     ) {
@@ -323,25 +324,13 @@ fun ExerciseCatalogItemCard(
                 }
             }
 
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                IconButton(onClick = onEdit) {
-                    Icon(
-                        imageVector = Icons.Default.Edit,
-                        contentDescription = "Edit",
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.size(18.dp)
-                    )
-                }
-                if (exercise.isCustom) {
-                    IconButton(onClick = onDelete) {
-                        Icon(
-                            imageVector = Icons.Default.DeleteOutline,
-                            contentDescription = "Delete",
-                            tint = CrimsonAlert,
-                            modifier = Modifier.size(18.dp)
-                        )
-                    }
-                }
+            IconButton(onClick = onEdit) {
+                Icon(
+                    imageVector = Icons.Default.Edit,
+                    contentDescription = "Edit",
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(18.dp)
+                )
             }
         }
     }

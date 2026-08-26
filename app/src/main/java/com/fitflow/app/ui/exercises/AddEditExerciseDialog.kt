@@ -24,6 +24,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowDropDown
+import androidx.compose.material.icons.filled.DeleteOutline
 import androidx.compose.material.icons.filled.ElectricBolt
 import androidx.compose.material.icons.filled.FitnessCenter
 import androidx.compose.material3.Button
@@ -70,6 +71,7 @@ fun AddEditExerciseDialog(
     exerciseToEdit: ExerciseEntity?,
     existingCategories: List<String> = emptyList(),
     onSave: (name: String, category: String, sets: Int, reps: Int, isSprint: Boolean, durationSeconds: Int) -> Unit,
+    onDelete: (() -> Unit)? = null,
     onDismiss: () -> Unit
 ) {
     var name by remember { mutableStateOf(exerciseToEdit?.name ?: "") }
@@ -498,44 +500,67 @@ fun AddEditExerciseDialog(
                 // Action Buttons
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.End
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    TextButton(onClick = onDismiss) {
-                        Text("Cancel", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    if (exerciseToEdit?.isCustom == true && onDelete != null) {
+                        TextButton(
+                            onClick = onDelete,
+                            colors = ButtonDefaults.textButtonColors(contentColor = CrimsonAlert)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.DeleteOutline,
+                                contentDescription = "Delete",
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text("Delete")
+                        }
+                    } else {
+                        Spacer(modifier = Modifier.width(1.dp))
                     }
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Button(
-                        onClick = {
-                            if (name.trim().isBlank()) {
-                                nameError = "Name cannot be empty"
-                            } else {
-                                val parsedDurationValue = durationInputText.toIntOrNull() ?: 30
-                                val calculatedDuration = if (durationUnit == "Minutes") {
-                                    parsedDurationValue * 60
-                                } else {
-                                    parsedDurationValue
-                                }.coerceAtLeast(1)
 
-                                onSave(
-                                    name.trim(),
-                                    category,
-                                    if (isSprint) 1 else defaultSets,
-                                    if (isSprint) 1 else defaultReps,
-                                    isSprint,
-                                    calculatedDuration
-                                )
-                            }
-                        },
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = if (isSprint) CategorySprint else EmeraldPrimary,
-                            contentColor = MaterialTheme.colorScheme.background
-                        ),
-                        shape = RoundedCornerShape(10.dp)
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.End
                     ) {
-                        Text(
-                            text = if (exerciseToEdit != null) "Update" else "Save Exercise",
-                            fontWeight = FontWeight.Bold
-                        )
+                        TextButton(onClick = onDismiss) {
+                            Text("Cancel", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Button(
+                            onClick = {
+                                if (name.trim().isBlank()) {
+                                    nameError = "Name cannot be empty"
+                                } else {
+                                    val parsedDurationValue = durationInputText.toIntOrNull() ?: 30
+                                    val calculatedDuration = if (durationUnit == "Minutes") {
+                                        parsedDurationValue * 60
+                                    } else {
+                                        parsedDurationValue
+                                    }.coerceAtLeast(1)
+
+                                    onSave(
+                                        name.trim(),
+                                        category,
+                                        if (isSprint) 1 else defaultSets,
+                                        if (isSprint) 1 else defaultReps,
+                                        isSprint,
+                                        calculatedDuration
+                                    )
+                                }
+                            },
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = if (isSprint) CategorySprint else EmeraldPrimary,
+                                contentColor = MaterialTheme.colorScheme.background
+                            ),
+                            shape = RoundedCornerShape(10.dp)
+                        ) {
+                            Text(
+                                text = if (exerciseToEdit != null) "Update" else "Save Exercise",
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
                     }
                 }
             }
