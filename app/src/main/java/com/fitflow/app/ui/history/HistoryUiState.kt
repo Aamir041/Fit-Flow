@@ -8,5 +8,7 @@ data class HistoryUiState(
     val totalExercisesLogged: Int = 0,
     val totalVolumeKg: Double = 0.0,
     val groupedByDate: Map<String, List<WorkoutLogWithExercise>> = emptyMap(),
-    val isLoading: Boolean = true
+    val isLoading: Boolean = true,
+    val message: String? = null,
+    val isSuccess: Boolean = true
 )

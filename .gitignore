@@ -17,6 +17,7 @@ local.properties
 .idea/caches/
 .idea/modules/
 .idea/navEditor.xml
+.idea/deploymentTargetSelector.xml
 *.iml
 
 # Log files and crash reports
@@ -34,3 +35,8 @@ local.properties
 
 # Windows specific files
 Thumbs.db
+
+.artifacts
+.idea/deploymentTargetSelector.xml
+.idea/planningMode.xml
+.idea/vcs.xml
