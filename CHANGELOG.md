@@ -17,6 +17,12 @@ All notable changes to the Fit-Flow project will be documented in this file.
   - Removed individual per-template export buttons to focus on full-database backup and restore.
   - Added repository methods in [FitFlowRepository.kt](file:///d:/Fit-Flow/app/src/main/java/com/fitflow/app/data/repository/FitFlowRepository.kt) (`exportAllTemplatesToJson`, `importTemplateBundleFromJson`) and DAO queries in [TemplateDao.kt](file:///d:/Fit-Flow/app/src/main/java/com/fitflow/app/data/local/dao/TemplateDao.kt).
   - Maintained automatic custom exercise creation for any unrecognized exercises in imported templates.
+- **Monthly GitHub-Style Consistency Heatmap & Daily Details Dialog** ([HistoryScreen.kt](file:///d:/Fit-Flow/app/src/main/java/com/fitflow/app/ui/history/HistoryScreen.kt)):
+  - Added an interactive activity contribution grid (`MonthContributionHeatmap`) showing a square for each day in the selected month.
+  - Squares illuminate based on workout activity intensity (0 workouts: subtle slate, 1 workout: light emerald, 2-3 workouts: emerald, 4+ workouts: vibrant primary emerald).
+  - Tapping any date square opens a dedicated, scrollable popup dialog (`DayWorkoutDetailsDialog`) displaying the complete list of movements, sets, reps, sprints, and weights logged on that specific day.
+  - Removed the static exercise list below the heatmap for a focused, clean layout.
+  - Included a highlighted border for the current day, month navigation controls (Previous / Next month), and an activity legend.
 - **Template Name Uniqueness Validation**:
   - Enforced case-insensitive template name uniqueness checks in [TemplateEditViewModel.kt](file:///d:/Fit-Flow/app/src/main/java/com/fitflow/app/ui/templates/TemplateEditViewModel.kt) on save.
   - Enforced template name uniqueness checks during JSON import to prevent duplicate template creation.
