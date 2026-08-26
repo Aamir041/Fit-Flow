@@ -28,7 +28,6 @@ import androidx.compose.material.icons.filled.EventNote
 import androidx.compose.material.icons.filled.FitnessCenter
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material.icons.filled.Speed
 import androidx.compose.material.icons.filled.Upload
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
@@ -253,12 +252,6 @@ fun HistoryScreenContent(
                             value = "${uiState.totalExercisesLogged}",
                             icon = Icons.Default.CheckCircle,
                             modifier = Modifier.weight(1f)
-                        )
-                        StatMetricCard(
-                            label = "Volume",
-                            value = "${uiState.totalVolumeKg.toInt()} kg",
-                            icon = Icons.Default.Speed,
-                            modifier = Modifier.weight(1.2f)
                         )
                     }
                 }
