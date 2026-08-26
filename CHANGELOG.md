@@ -29,6 +29,10 @@ All notable changes to the Fit-Flow project will be documented in this file.
 - Fixed missing `OutlinedButton` and `ButtonDefaults` Material3 imports in [TemplatesScreen.kt](file:///d:/Fit-Flow/app/src/main/java/com/fitflow/app/ui/templates/TemplatesScreen.kt).
 
 ### Changed
+- **Exercise Library Delete Flow** ([ExerciseLibraryScreen.kt](file:///d:/Fit-Flow/app/src/main/java/com/fitflow/app/ui/exercises/ExerciseLibraryScreen.kt), [AddEditExerciseDialog.kt](file:///d:/Fit-Flow/app/src/main/java/com/fitflow/app/ui/exercises/AddEditExerciseDialog.kt)):
+  - Moved the custom exercise delete action from individual list item tiles into the edit dialog.
+  - Added a dedicated **Delete** button in the dialog action row when editing custom exercises, prompting the safety confirmation dialog.
+  - Made the entire list item card clickable to open the edit dialog.
 - **Sprint Duration Configuration in AddEditExerciseDialog** ([AddEditExerciseDialog.kt](file:///d:/Fit-Flow/app/src/main/java/com/fitflow/app/ui/exercises/AddEditExerciseDialog.kt)):
   - Replaced the increment/decrement `NumberStepper` with an editable numeric `OutlinedTextField` for direct duration input.
   - Added an adjacent unit dropdown menu supporting **Seconds (s)** and **Minutes (min)**.
