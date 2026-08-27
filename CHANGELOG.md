@@ -2,8 +2,6 @@
 
 All notable changes to the Fit-Flow project will be documented in this file.
 
-## [Unreleased] - 2026-08-25
-
 ### Added
 - **Workout History Management**:
   - Implemented **Export History (JSON)** to backup all workout logs to the device storage.
@@ -47,5 +45,7 @@ All notable changes to the Fit-Flow project will be documented in this file.
 ### Removed
 - **Weight Counter from Today's Workout Tab** ([ExerciseLogCard.kt](file:///d:/Fit-Flow/app/src/main/java/com/fitflow/app/ui/home/ExerciseLogCard.kt)):
   - Removed the `DecimalStepper` weight counter from standard exercise logging cards, streamlining logging to focus on Sets and Reps (or duration for sprint exercises).
+- **Sessions and Completed Counters from History Screen** ([HistoryScreen.kt](file:///d:/Fit-Flow/app/src/main/java/com/fitflow/app/ui/history/HistoryScreen.kt)):
+  - Removed the aggregate stats cards row displaying "Sessions" and "Completed" count metrics, giving full focus to the consistency heatmap on the History screen.
 - **Volume Metric from History Screen** ([HistoryScreen.kt](file:///d:/Fit-Flow/app/src/main/java/com/fitflow/app/ui/history/HistoryScreen.kt)):
-  - Removed the Volume metric card from the top aggregate stats row in the History screen, cleanly balancing the stats row with Sessions and Completed counts.
+  - Removed the Volume metric card from the top aggregate stats row in the History screen.

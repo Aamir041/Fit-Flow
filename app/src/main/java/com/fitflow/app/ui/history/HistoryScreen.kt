@@ -21,10 +21,8 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.DeleteSweep
 import androidx.compose.material.icons.filled.Download
-import androidx.compose.material.icons.filled.EventNote
 import androidx.compose.material.icons.filled.FitnessCenter
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.MoreVert
@@ -232,27 +230,6 @@ fun HistoryScreenContent(
                 contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                // Aggregate Stats Cards Row
-                item {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(10.dp)
-                    ) {
-                        StatMetricCard(
-                            label = "Sessions",
-                            value = "${uiState.totalWorkoutsCount}",
-                            icon = Icons.Default.EventNote,
-                            modifier = Modifier.weight(1f)
-                        )
-                        StatMetricCard(
-                            label = "Completed",
-                            value = "${uiState.totalExercisesLogged}",
-                            icon = Icons.Default.CheckCircle,
-                            modifier = Modifier.weight(1f)
-                        )
-                    }
-                }
-
                 // Monthly GitHub-style Activity Contribution Heatmap
                 item {
                     MonthContributionHeatmap(
@@ -630,43 +607,6 @@ fun DayWorkoutDetailsDialog(
     )
 }
 
-@Composable
-fun StatMetricCard(
-    label: String,
-    value: String,
-    icon: ImageVector,
-    modifier: Modifier = Modifier
-) {
-    Card(
-        modifier = modifier
-            .clip(RoundedCornerShape(16.dp))
-            .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(16.dp)),
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
-    ) {
-        Column(modifier = Modifier.padding(12.dp)) {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                tint = EmeraldPrimary,
-                modifier = Modifier.size(18.dp)
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                text = value,
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurface
-            )
-            Text(
-                text = label.uppercase(),
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                fontSize = 10.sp
-            )
-        }
-    }
-}
 
 @Preview(showBackground = true)
 @Composable
