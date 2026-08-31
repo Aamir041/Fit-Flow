@@ -53,13 +53,53 @@ data class HistoryLogExport(
 }
 
 /**
- * Bundle containing the entire workout history for backup and restore.
+ * Represents a single food log entry for export/import purposes.
+ */
+data class FoodLogExport(
+    val date: String,
+    val foodName: String,
+    val quantity: Double = 1.0,
+    val unit: String = "g",
+    val calories: Int = 0,
+    val mealTime: String = "Breakfast",
+    val timestamp: Long = System.currentTimeMillis()
+) {
+    fun toJson(): JSONObject {
+        return JSONObject().apply {
+            put("date", date)
+            put("foodName", foodName)
+            put("quantity", quantity)
+            put("unit", unit)
+            put("calories", calories)
+            put("mealTime", mealTime)
+            put("timestamp", timestamp)
+        }
+    }
+
+    companion object {
+        fun fromJson(json: JSONObject): FoodLogExport {
+            return FoodLogExport(
+                date = json.optString("date", ""),
+                foodName = json.optString("foodName", "").trim(),
+                quantity = json.optDouble("quantity", 1.0),
+                unit = json.optString("unit", "g").trim().ifEmpty { "g" },
+                calories = json.optInt("calories", 0),
+                mealTime = json.optString("mealTime", "Breakfast").trim().ifEmpty { "Breakfast" },
+                timestamp = json.optLong("timestamp", System.currentTimeMillis())
+            )
+        }
+    }
+}
+
+/**
+ * Bundle containing the entire history (workouts and food logs) for backup and restore.
  */
 data class HistoryBundleExportJson(
-    val version: Int = 1,
+    val version: Int = 2,
     val app: String = "FitFlow",
     val exportedAt: Long = System.currentTimeMillis(),
-    val logs: List<HistoryLogExport> = emptyList()
+    val logs: List<HistoryLogExport> = emptyList(),
+    val foodLogs: List<FoodLogExport> = emptyList()
 ) {
     fun toJsonString(indentSpaces: Int = 2): String {
         val json = JSONObject().apply {
@@ -69,6 +109,10 @@ data class HistoryBundleExportJson(
             val logsArray = JSONArray()
             logs.forEach { logsArray.put(it.toJson()) }
             put("logs", logsArray)
+
+            val foodLogsArray = JSONArray()
+            foodLogs.forEach { foodLogsArray.put(it.toJson()) }
+            put("foodLogs", foodLogsArray)
         }
         return json.toString(indentSpaces)
     }
@@ -94,11 +138,26 @@ data class HistoryBundleExportJson(
                 }
             }
 
+            val foodLogsList = mutableListOf<FoodLogExport>()
+            val foodLogsArray = json.optJSONArray("foodLogs")
+            if (foodLogsArray != null) {
+                for (i in 0 until foodLogsArray.length()) {
+                    val itemObj = foodLogsArray.optJSONObject(i)
+                    if (itemObj != null) {
+                        val foodLog = FoodLogExport.fromJson(itemObj)
+                        if (foodLog.foodName.isNotBlank() && foodLog.date.isNotBlank()) {
+                            foodLogsList.add(foodLog)
+                        }
+                    }
+                }
+            }
+
             return HistoryBundleExportJson(
                 version = version,
                 app = app,
                 exportedAt = exportedAt,
-                logs = logsList
+                logs = logsList,
+                foodLogs = foodLogsList
             )
         }
     }
