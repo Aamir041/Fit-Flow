@@ -22,8 +22,10 @@ import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Celebration
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.FitnessCenter
+import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
@@ -54,6 +56,7 @@ import java.time.format.DateTimeFormatter
 fun HomeScreen(
     viewModel: HomeViewModel,
     onNavigateToSchedule: () -> Unit,
+    onOpenThemeDialog: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -76,6 +79,7 @@ fun HomeScreen(
             viewModel.closeRestTimer()
         },
         onNavigateToSchedule = onNavigateToSchedule,
+        onOpenThemeDialog = onOpenThemeDialog,
         modifier = modifier
     )
 }
@@ -89,6 +93,7 @@ fun HomeScreenContent(
     onOpenTimer: (ExerciseLogItem) -> Unit,
     onCloseTimer: () -> Unit,
     onNavigateToSchedule: () -> Unit,
+    onOpenThemeDialog: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val dateFormatter = DateTimeFormatter.ofPattern("EEEE, MMMM d")
@@ -103,7 +108,16 @@ fun HomeScreenContent(
         topBar = {
             FitFlowTopBar(
                 title = "Today's Workout",
-                subtitle = formattedDate
+                subtitle = formattedDate,
+                actions = {
+                    IconButton(onClick = onOpenThemeDialog) {
+                        Icon(
+                            imageVector = Icons.Default.Palette,
+                            contentDescription = "Change Theme",
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                }
             )
         },
         modifier = modifier.fillMaxSize(),

@@ -2,6 +2,7 @@ package com.fitflow.app.ui.theme
 
 import android.app.Activity
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
@@ -11,7 +12,12 @@ import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
 
-private val DarkColorScheme = darkColorScheme(
+enum class AppThemeMode(val displayName: String, val description: String) {
+    EMERALD("Electric Emerald", "High-energy neon green & cyan athletic palette"),
+    SPIDERMAN("Spider-Man Edition", "Heroic comic red, vibrant blue & charcoal palette")
+}
+
+private val EmeraldDarkColorScheme = darkColorScheme(
     primary = EmeraldPrimary,
     onPrimary = BackgroundDark,
     primaryContainer = SurfaceElevatedDark,
@@ -34,35 +40,39 @@ private val DarkColorScheme = darkColorScheme(
     onError = TextPrimaryDark
 )
 
-private val LightColorScheme = lightColorScheme(
-    primary = EmeraldDark,
-    onPrimary = SurfaceLight,
-    primaryContainer = SurfaceVariantLight,
-    onPrimaryContainer = EmeraldDark,
-    secondary = CyanDark,
-    onSecondary = SurfaceLight,
-    secondaryContainer = SurfaceVariantLight,
-    onSecondaryContainer = CyanDark,
-    tertiary = AmberAccent,
-    onTertiary = SurfaceLight,
-    background = BackgroundLight,
-    onBackground = TextPrimaryLight,
-    surface = SurfaceLight,
-    onSurface = TextPrimaryLight,
-    surfaceVariant = SurfaceVariantLight,
-    onSurfaceVariant = TextSecondaryLight,
-    outline = OutlineLight,
-    outlineVariant = OutlineVariantLight,
+private val SpidermanDarkColorScheme = darkColorScheme(
+    primary = SpideyRedPrimary,
+    onPrimary = SpideyWhiteHighlight,
+    primaryContainer = SpideyCrimsonDark,
+    onPrimaryContainer = SpideyWhiteHighlight,
+    secondary = SpideyBlueSecondary,
+    onSecondary = SpideyWhiteHighlight,
+    secondaryContainer = SpideySurfaceVariantDark,
+    onSecondaryContainer = SpideyBlueLight,
+    tertiary = SpideyBlueSecondary,
+    onTertiary = SpideyWhiteHighlight,
+    background = SpideyBackgroundDark,
+    onBackground = SpideyWhiteHighlight,
+    surface = SpideySurfaceDark,
+    onSurface = SpideyWhiteHighlight,
+    surfaceVariant = SpideySurfaceVariantDark,
+    onSurfaceVariant = TextSecondaryDark,
+    outline = SpideyOutlineDark,
+    outlineVariant = SpideyOutlineVariantDark,
     error = CrimsonAlert,
-    onError = SurfaceLight
+    onError = SpideyWhiteHighlight
 )
 
 @Composable
 fun FitFlowTheme(
+    themeMode: AppThemeMode = AppThemeMode.EMERALD,
     darkTheme: Boolean = isSystemInDarkTheme(),
     content: @Composable () -> Unit
 ) {
-    val colorScheme = if (darkTheme) DarkColorScheme else DarkColorScheme // Dark theme is default for gym/fitness aesthetic
+    val colorScheme: ColorScheme = when (themeMode) {
+        AppThemeMode.EMERALD -> EmeraldDarkColorScheme
+        AppThemeMode.SPIDERMAN -> SpidermanDarkColorScheme
+    }
 
     val view = LocalView.current
     if (!view.isInEditMode) {
@@ -72,8 +82,8 @@ fun FitFlowTheme(
                 it.statusBarColor = colorScheme.background.toArgb()
                 it.navigationBarColor = colorScheme.background.toArgb()
                 WindowCompat.getInsetsController(it, view).apply {
-                    isAppearanceLightStatusBars = !darkTheme
-                    isAppearanceLightNavigationBars = !darkTheme
+                    isAppearanceLightStatusBars = false
+                    isAppearanceLightNavigationBars = false
                 }
             }
         }

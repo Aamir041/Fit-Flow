@@ -455,4 +455,15 @@ class FitFlowLogicTest {
         assertEquals("Bench Press", parsed.logs[0].exerciseName)
         assertTrue(parsed.foodLogs.isEmpty())
     }
+
+    @Test
+    fun testAppThemeModes() {
+        val emerald = com.fitflow.app.ui.theme.AppThemeMode.EMERALD
+        val spiderman = com.fitflow.app.ui.theme.AppThemeMode.SPIDERMAN
+
+        assertEquals("Electric Emerald", emerald.displayName)
+        assertEquals("Spider-Man Edition", spiderman.displayName)
+        assertEquals("EMERALD", emerald.name)
+        assertEquals("SPIDERMAN", spiderman.name)
+    }
 }

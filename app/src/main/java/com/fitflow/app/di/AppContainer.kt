@@ -11,6 +11,7 @@ import kotlinx.coroutines.launch
 
 interface AppContainer {
     val repository: FitFlowRepository
+    val themePreferences: com.fitflow.app.data.local.ThemePreferences
     val applicationScope: CoroutineScope
 }
 
@@ -24,6 +25,10 @@ class DefaultAppContainer(private val context: Context) : AppContainer {
 
     override val repository: FitFlowRepository by lazy {
         FitFlowRepositoryImpl(database)
+    }
+
+    override val themePreferences: com.fitflow.app.data.local.ThemePreferences by lazy {
+        com.fitflow.app.data.local.ThemePreferences(context)
     }
 
     init {

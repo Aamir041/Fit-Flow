@@ -36,6 +36,7 @@ fun FitFlowNavGraph(
     navController: NavHostController,
     repository: FitFlowRepository,
     innerPadding: PaddingValues,
+    onOpenThemeDialog: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     NavHost(
@@ -58,7 +59,8 @@ fun FitFlowNavGraph(
                     navController.navigate(Screen.Schedule.route) {
                         launchSingleTop = true
                     }
-                }
+                },
+                onOpenThemeDialog = onOpenThemeDialog
             )
         }
 

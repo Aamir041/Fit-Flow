@@ -305,7 +305,7 @@ fun MonthContributionHeatmap(
                     Text(
                         text = "CONSISTENCY HEATMAP",
                         style = MaterialTheme.typography.labelSmall,
-                        color = EmeraldPrimary,
+                        color = MaterialTheme.colorScheme.primary,
                         letterSpacing = 1.sp,
                         fontWeight = FontWeight.Bold
                     )
@@ -380,20 +380,20 @@ fun MonthContributionHeatmap(
                                 val isToday = isCurrentMonth && dayNumber == today.dayOfMonth
 
                                 val squareBgColor = when {
-                                    workoutCount >= 4 -> EmeraldPrimary
-                                    workoutCount in 2..3 -> EmeraldLight
-                                    workoutCount == 1 -> EmeraldLight.copy(alpha = 0.65f)
+                                    workoutCount >= 4 -> MaterialTheme.colorScheme.primary
+                                    workoutCount in 2..3 -> MaterialTheme.colorScheme.primary.copy(alpha = 0.75f)
+                                    workoutCount == 1 -> MaterialTheme.colorScheme.primary.copy(alpha = 0.45f)
                                     else -> MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f)
                                 }
 
                                 val squareBorderColor = when {
-                                    isToday -> CyanAccent
-                                    isLit -> EmeraldPrimary.copy(alpha = 0.8f)
+                                    isToday -> MaterialTheme.colorScheme.secondary
+                                    isLit -> MaterialTheme.colorScheme.primary.copy(alpha = 0.85f)
                                     else -> MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)
                                 }
 
                                 val textColor = when {
-                                    workoutCount >= 2 -> MaterialTheme.colorScheme.background
+                                    workoutCount >= 2 -> MaterialTheme.colorScheme.onPrimary
                                     isLit -> MaterialTheme.colorScheme.onSurface
                                     else -> MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
                                 }

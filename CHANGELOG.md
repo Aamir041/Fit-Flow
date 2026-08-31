@@ -3,6 +3,12 @@
 All notable changes to the Fit-Flow project will be documented in this file.
 
 ### Added
+- **Multi-Theme Engine & Spider-Man Edition Theme** ([Theme.kt](file:///d:/Fit-Flow/app/src/main/java/com/fitflow/app/ui/theme/Theme.kt), [Color.kt](file:///d:/Fit-Flow/app/src/main/java/com/fitflow/app/ui/theme/Color.kt), [ThemeSelectionDialog.kt](file:///d:/Fit-Flow/app/src/main/java/com/fitflow/app/ui/components/ThemeSelectionDialog.kt), [ThemePreferences.kt](file:///d:/Fit-Flow/app/src/main/java/com/fitflow/app/data/local/ThemePreferences.kt)):
+  - Added **Spider-Man Edition** theme featuring Spidey Red (`#DE0606`), Spidey Crimson Dark (`#AC0202`), Spidey Blue (`#007FD7`), Spidey Charcoal (`#3F3F3F`), and Spidey Highlight White (`#E2E2E2`).
+  - Added interactive **Theme Selection Dialog** with color swatches and instant preview.
+  - Added **Palette / Theme** button to the Today's Workout top bar.
+  - Added persistent theme selection saved to `ThemePreferences`.
+  - Updated consistency heatmap and dynamic theme components to automatically render in the selected theme palette.
 - **Food & Nutrition Logging Tab** ([FoodScreen.kt](file:///d:/Fit-Flow/app/src/main/java/com/fitflow/app/ui/food/FoodScreen.kt), [FoodViewModel.kt](file:///d:/Fit-Flow/app/src/main/java/com/fitflow/app/ui/food/FoodViewModel.kt), [AddEditFoodDialog.kt](file:///d:/Fit-Flow/app/src/main/java/com/fitflow/app/ui/food/AddEditFoodDialog.kt)):
   - Added a dedicated bottom navigation tab for logging daily food intake and calories for the present date only.
   - Interactive **Log Food** dialog with input for food name, quantity, unit selection (Grams `g`, Milligrams `mg`, Kilograms `kg`, Litres `l`, Millilitres `ml`, `unit`, `candy`, `piece`, `serving`, `cup`, `tbsp`, `tsp`, or custom unit text), calories (kcal), and time of day / meal categorization (Breakfast, Lunch, Dinner, Snack, Pre-Workout, Post-Workout).

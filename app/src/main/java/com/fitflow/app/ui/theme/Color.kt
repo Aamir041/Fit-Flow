@@ -44,6 +44,21 @@ val TextPrimaryLight = Color(0xFF111317)
 val TextSecondaryLight = Color(0xFF4B5565)
 val TextMutedLight = Color(0xFF8C93A4)
 
+// Spider-Man Edition Palette
+val SpideyRedPrimary = Color(0xFFDE0606)
+val SpideyCrimsonDark = Color(0xFFAC0202)
+val SpideyBlueSecondary = Color(0xFF007FD7)
+val SpideyBlueLight = Color(0xFF40A9FF)
+val SpideyCharcoal = Color(0xFF3F3F3F)
+val SpideyWhiteHighlight = Color(0xFFE2E2E2)
+
+val SpideyBackgroundDark = Color(0xFF0E0F14)
+val SpideySurfaceDark = Color(0xFF15171F)
+val SpideySurfaceVariantDark = Color(0xFF1F222C)
+val SpideySurfaceElevatedDark = Color(0xFF282B37)
+val SpideyOutlineDark = Color(0xFF3F3F3F)
+val SpideyOutlineVariantDark = Color(0xFF2D303C)
+
 // Category Colors for Badges
 val CategoryChest = Color(0xFFFF5252)
 val CategoryBack = Color(0xFF448AFF)
@@ -58,4 +73,5 @@ val CategoryTraps = Color(0xFF536DFE)
 val CategoryCalves = Color(0xFF00E5FF)
 val CategoryFullBody = Color(0xFFFF6E40)
 val CategorySprint = Color(0xFFFFD600)
+
 
