@@ -146,6 +146,7 @@ fun FitFlowNavGraph(
         ) { backStackEntry ->
             val templateId = backStackEntry.arguments?.getLong("templateId") ?: 0L
             val editViewModel: TemplateEditViewModel = viewModel(
+                key = "template_edit_$templateId",
                 factory = ViewModelFactory(repository, templateId)
             )
             TemplateDetailEditScreen(

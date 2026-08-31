@@ -29,7 +29,7 @@ import kotlinx.coroutines.launch
         WorkoutLogEntity::class,
         FoodLogEntity::class
     ],
-    version = 4,
+    version = 5,
     exportSchema = false
 )
 abstract class FitFlowDatabase : RoomDatabase() {
@@ -44,6 +44,12 @@ abstract class FitFlowDatabase : RoomDatabase() {
         @Volatile
         private var INSTANCE: FitFlowDatabase? = null
 
+        val MIGRATION_4_5 = object : androidx.room.migration.Migration(4, 5) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE workout_logs ADD COLUMN setsDataJson TEXT NOT NULL DEFAULT ''")
+            }
+        }
+
         fun getDatabase(context: Context, scope: CoroutineScope = CoroutineScope(Dispatchers.IO)): FitFlowDatabase {
             return INSTANCE ?: synchronized(this) {
                 val instance = Room.databaseBuilder(
@@ -51,6 +57,7 @@ abstract class FitFlowDatabase : RoomDatabase() {
                     FitFlowDatabase::class.java,
                     "fitflow3.db"
                 )
+                    .addMigrations(MIGRATION_4_5)
                     .fallbackToDestructiveMigration()
                     .addCallback(DatabaseCallback(scope))
                     .build()

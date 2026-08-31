@@ -60,20 +60,35 @@ fun HomeScreen(
 
     HomeScreenContent(
         uiState = uiState,
-        onValuesChanged = { exId, sets, reps, weight ->
-            viewModel.updateExerciseValues(exId, sets, reps, weight)
-        },
-        onDurationChanged = { exId, duration ->
-            viewModel.updateSprintDuration(exId, duration)
+        onCardClick = { item ->
+            viewModel.openSetLogger(item)
         },
         onToggleCompleted = { item ->
             viewModel.toggleExerciseCompletion(item)
+        },
+        onToggleSet = { exId, setNumber ->
+            viewModel.toggleSetCompletion(exId, setNumber)
+        },
+        onUpdateSetValues = { exId, setNumber, reps, weight ->
+            viewModel.updateSetValues(exId, setNumber, reps, weight)
+        },
+        onAddSet = { exId ->
+            viewModel.addSet(exId)
+        },
+        onRemoveSet = { exId, setNumber ->
+            viewModel.removeSet(exId, setNumber)
+        },
+        onDurationChanged = { exId, duration ->
+            viewModel.updateSprintDuration(exId, duration)
         },
         onOpenTimer = { item ->
             viewModel.openRestTimer(item)
         },
         onCloseTimer = {
             viewModel.closeRestTimer()
+        },
+        onCloseSetLogger = {
+            viewModel.closeSetLogger()
         },
         onNavigateToSchedule = onNavigateToSchedule,
         modifier = modifier
@@ -83,11 +98,16 @@ fun HomeScreen(
 @Composable
 fun HomeScreenContent(
     uiState: HomeUiState,
-    onValuesChanged: (exerciseId: Long, sets: Int, reps: Int, weight: Double) -> Unit,
-    onDurationChanged: (exerciseId: Long, durationSeconds: Int) -> Unit = { _, _ -> },
+    onCardClick: (ExerciseLogItem) -> Unit,
     onToggleCompleted: (ExerciseLogItem) -> Unit,
+    onToggleSet: (exerciseId: Long, setNumber: Int) -> Unit,
+    onUpdateSetValues: (exerciseId: Long, setNumber: Int, reps: Int, weight: Double) -> Unit,
+    onAddSet: (exerciseId: Long) -> Unit,
+    onRemoveSet: (exerciseId: Long, setNumber: Int) -> Unit,
+    onDurationChanged: (exerciseId: Long, durationSeconds: Int) -> Unit = { _, _ -> },
     onOpenTimer: (ExerciseLogItem) -> Unit,
     onCloseTimer: () -> Unit,
+    onCloseSetLogger: () -> Unit,
     onNavigateToSchedule: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -162,18 +182,9 @@ fun HomeScreenContent(
                 ) { item ->
                     ExerciseLogCard(
                         item = item,
-                        onValuesChanged = { sets, reps, weight ->
-                            onValuesChanged(item.exerciseId, sets, reps, weight)
-                        },
-                        onDurationChanged = { duration ->
-                            onDurationChanged(item.exerciseId, duration)
-                        },
-                        onToggleCompleted = {
-                            onToggleCompleted(item)
-                        },
-                        onOpenTimer = {
-                            onOpenTimer(item)
-                        }
+                        onCardClick = { onCardClick(item) },
+                        onToggleCompleted = { onToggleCompleted(item) },
+                        onOpenTimer = { onOpenTimer(item) }
                     )
                 }
 
@@ -182,6 +193,32 @@ fun HomeScreenContent(
                     Spacer(modifier = Modifier.height(24.dp))
                 }
             }
+        }
+
+        // Set Logger Dialog
+        uiState.selectedExerciseForLogging?.let { selectedItem ->
+            LogSetsDialog(
+                item = selectedItem,
+                onToggleSet = { setNumber ->
+                    onToggleSet(selectedItem.exerciseId, setNumber)
+                },
+                onUpdateSetValues = { setNumber, reps, weight ->
+                    onUpdateSetValues(selectedItem.exerciseId, setNumber, reps, weight)
+                },
+                onAddSet = {
+                    onAddSet(selectedItem.exerciseId)
+                },
+                onRemoveSet = { setNumber ->
+                    onRemoveSet(selectedItem.exerciseId, setNumber)
+                },
+                onDurationChanged = { duration ->
+                    onDurationChanged(selectedItem.exerciseId, duration)
+                },
+                onOpenTimer = {
+                    onOpenTimer(selectedItem)
+                },
+                onDismiss = onCloseSetLogger
+            )
         }
 
         // Rest Timer Dialog
@@ -356,10 +393,16 @@ fun HomeScreenPreview() {
                 progressPercent = 0.33f,
                 isLoading = false
             ),
-            onValuesChanged = { _, _, _, _ -> },
+            onCardClick = {},
             onToggleCompleted = {},
+            onToggleSet = { _, _ -> },
+            onUpdateSetValues = { _, _, _, _ -> },
+            onAddSet = {},
+            onRemoveSet = { _, _ -> },
+            onDurationChanged = { _, _ -> },
             onOpenTimer = {},
             onCloseTimer = {},
+            onCloseSetLogger = {},
             onNavigateToSchedule = {}
         )
     }

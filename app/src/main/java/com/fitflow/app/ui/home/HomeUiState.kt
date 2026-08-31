@@ -5,6 +5,13 @@ import com.fitflow.app.data.local.relation.TemplateWithExercises
 import java.time.DayOfWeek
 import java.time.LocalDate
 
+data class WorkoutSetUiModel(
+    val setNumber: Int,
+    val reps: Int,
+    val weight: Double,
+    val isCompleted: Boolean = false
+)
+
 data class ExerciseLogItem(
     val templateExerciseId: Long,
     val exerciseId: Long,
@@ -19,8 +26,15 @@ data class ExerciseLogItem(
     val isCompleted: Boolean,
     val isSprint: Boolean = false,
     val targetDurationSeconds: Int = 30,
-    val actualDurationSeconds: Int = 30
-)
+    val actualDurationSeconds: Int = 30,
+    val sets: List<WorkoutSetUiModel> = emptyList()
+) {
+    val completedSetsCount: Int
+        get() = sets.count { it.isCompleted }
+
+    val totalSetsCount: Int
+        get() = if (sets.isNotEmpty()) sets.size else targetSets
+}
 
 data class HomeUiState(
     val currentDate: LocalDate = LocalDate.now(),
@@ -31,5 +45,7 @@ data class HomeUiState(
     val totalCount: Int = 0,
     val progressPercent: Float = 0f,
     val isLoading: Boolean = true,
-    val activeRestTimer: ExerciseLogItem? = null
+    val activeRestTimer: ExerciseLogItem? = null,
+    val selectedExerciseForLogging: ExerciseLogItem? = null
 )
+

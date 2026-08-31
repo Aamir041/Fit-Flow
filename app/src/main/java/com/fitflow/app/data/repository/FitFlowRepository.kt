@@ -58,6 +58,13 @@ interface FitFlowRepository {
     fun getLogForExerciseFlow(date: String, exerciseId: Long): Flow<WorkoutLogEntity?>
     suspend fun getLogForExercise(date: String, exerciseId: Long): WorkoutLogEntity?
     suspend fun saveWorkoutLog(log: WorkoutLogEntity): Long
+    suspend fun saveExerciseSets(
+        date: String,
+        templateId: Long?,
+        exerciseId: Long,
+        sets: List<com.fitflow.app.data.local.model.WorkoutSetRecord>,
+        durationSeconds: Int = 0
+    ): WorkoutLogEntity
     suspend fun toggleExerciseCompletion(
         date: String,
         templateId: Long?,
@@ -312,6 +319,43 @@ class FitFlowRepositoryImpl(
         workoutLogDao.upsertWorkoutLog(log)
     }
 
+    override suspend fun saveExerciseSets(
+        date: String,
+        templateId: Long?,
+        exerciseId: Long,
+        sets: List<com.fitflow.app.data.local.model.WorkoutSetRecord>,
+        durationSeconds: Int
+    ): WorkoutLogEntity = withContext(Dispatchers.IO) {
+        val existing = workoutLogDao.getLogForExercise(date, exerciseId)
+        val setsJson = com.fitflow.app.data.local.model.WorkoutSetRecord.serializeSetsToJson(sets)
+        val allDone = sets.isNotEmpty() && sets.all { it.isCompleted }
+        val maxReps = sets.maxOfOrNull { it.reps } ?: 0
+        val maxWeight = sets.maxOfOrNull { it.weight } ?: 0.0
+
+        val logToSave = (existing ?: WorkoutLogEntity(
+            date = date,
+            templateId = templateId,
+            exerciseId = exerciseId,
+            actualSets = sets.size,
+            actualReps = maxReps,
+            actualWeight = maxWeight,
+            actualDurationSeconds = durationSeconds,
+            isCompleted = allDone,
+            setsDataJson = setsJson
+        )).copy(
+            actualSets = sets.size,
+            actualReps = if (sets.isNotEmpty()) sets.last().reps else maxReps,
+            actualWeight = if (sets.isNotEmpty()) sets.last().weight else maxWeight,
+            actualDurationSeconds = durationSeconds,
+            isCompleted = allDone,
+            setsDataJson = setsJson,
+            timestamp = System.currentTimeMillis()
+        )
+
+        workoutLogDao.upsertWorkoutLog(logToSave)
+        logToSave
+    }
+
     override suspend fun toggleExerciseCompletion(
         date: String,
         templateId: Long?,
@@ -366,6 +410,7 @@ class FitFlowRepositoryImpl(
                 actualDurationSeconds = logWithEx.log.actualDurationSeconds,
                 isCompleted = logWithEx.log.isCompleted,
                 isSprint = logWithEx.exercise.isSprint,
+                setsDataJson = logWithEx.log.setsDataJson,
                 timestamp = logWithEx.log.timestamp
             )
         }
@@ -430,6 +475,7 @@ class FitFlowRepositoryImpl(
                     actualWeight = exportLog.actualWeight,
                     actualDurationSeconds = exportLog.actualDurationSeconds,
                     isCompleted = exportLog.isCompleted,
+                    setsDataJson = exportLog.setsDataJson,
                     timestamp = exportLog.timestamp
                 )
 

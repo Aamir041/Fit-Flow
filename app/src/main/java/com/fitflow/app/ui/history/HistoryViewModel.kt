@@ -28,8 +28,20 @@ class HistoryViewModel(
         val groupedFoods = foodLogs.groupBy { it.date }
         val distinctDatesCount = groupedWorkouts.keys.size
         val totalExercises = logs.size
-        val totalVolume = logs.filter { !it.exercise.isSprint }.sumOf {
-            it.log.actualSets * it.log.actualReps * it.log.actualWeight
+        val totalVolume = logs.filter { !it.exercise.isSprint }.sumOf { logWithEx ->
+            val setsJson = logWithEx.log.setsDataJson
+            if (setsJson.isNotBlank()) {
+                val sets = com.fitflow.app.data.local.model.WorkoutSetRecord.parseSetsFromJson(setsJson)
+                val completedSets = sets.filter { it.isCompleted }
+                if (completedSets.isNotEmpty()) {
+                    completedSets.sumOf { it.reps * it.weight }
+                } else {
+                    // Fallback to all sets or aggregate
+                    sets.sumOf { it.reps * it.weight }
+                }
+            } else {
+                logWithEx.log.actualSets * logWithEx.log.actualReps * logWithEx.log.actualWeight
+            }
         }
 
         HistoryUiState(

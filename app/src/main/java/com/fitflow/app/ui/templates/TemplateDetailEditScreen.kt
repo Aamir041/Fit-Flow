@@ -106,8 +106,8 @@ fun TemplateDetailEditScreen(
         onUpdateExerciseValues = { idx, sets, reps, rest ->
             viewModel.updateExerciseValues(idx, sets, reps, rest)
         },
-        onUpdateSprintDuration = { idx, duration ->
-            viewModel.updateSprintDuration(idx, duration)
+        onUpdateSprintValues = { idx, rounds, duration, rest ->
+            viewModel.updateSprintValues(idx, rounds, duration, rest)
         },
         onSaveTemplate = { viewModel.saveTemplate() },
         onNavigateBack = onNavigateBack,
@@ -131,7 +131,7 @@ fun TemplateDetailEditScreenContent(
     onMoveUp: (Int) -> Unit,
     onMoveDown: (Int) -> Unit,
     onUpdateExerciseValues: (Int, Int, Int, Int) -> Unit,
-    onUpdateSprintDuration: (Int, Int) -> Unit = { _, _ -> },
+    onUpdateSprintValues: (Int, Int, Int, Int) -> Unit = { _, _, _, _ -> },
     onSaveTemplate: () -> Unit,
     onNavigateBack: () -> Unit,
     modifier: Modifier = Modifier
@@ -144,30 +144,32 @@ fun TemplateDetailEditScreenContent(
         topBar = {
             FitFlowTopBar(
                 title = screenTitle,
+                subtitle = if (isEditMode) "Configure rounds, sets, reps & movements" else "Design a custom routine",
                 onBackClick = onNavigateBack,
                 actions = {
                     Button(
                         onClick = onSaveTemplate,
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = EmeraldPrimary,
-                            contentColor = MaterialTheme.colorScheme.background
-                        ),
-                        shape = RoundedCornerShape(12.dp),
-                        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 6.dp)
+                        colors = ButtonDefaults.buttonColors(containerColor = EmeraldPrimary),
+                        shape = RoundedCornerShape(10.dp),
+                        contentPadding = PaddingValues(horizontal = 14.dp, vertical = 6.dp)
                     ) {
                         Icon(
                             imageVector = Icons.Default.Check,
-                            contentDescription = "Save",
+                            contentDescription = null,
                             modifier = Modifier.size(16.dp)
                         )
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text(text = "Save", fontWeight = FontWeight.Bold)
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(
+                            text = "Save",
+                            fontWeight = FontWeight.Bold,
+                            style = MaterialTheme.typography.labelLarge
+                        )
                     }
                 }
             )
         },
-        modifier = modifier.fillMaxSize(),
-        containerColor = MaterialTheme.colorScheme.background
+        containerColor = MaterialTheme.colorScheme.background,
+        modifier = modifier.fillMaxSize()
     ) { innerPadding ->
         if (uiState.isLoading) {
             Box(
@@ -183,60 +185,46 @@ fun TemplateDetailEditScreenContent(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(innerPadding),
-                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 16.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
+                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
+                verticalArrangement = Arrangement.spacedBy(14.dp)
             ) {
                 // Template Name Input
                 item {
-                    Column {
-                        Text(
-                            text = "TEMPLATE NAME",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            fontWeight = FontWeight.Bold,
-                            modifier = Modifier.padding(bottom = 6.dp)
-                        )
-                        OutlinedTextField(
-                            value = uiState.templateName,
-                            onValueChange = onNameChanged,
-                            modifier = Modifier.fillMaxWidth(),
-                            placeholder = { Text("e.g., Push Day, Leg Power, Upper Body") },
-                            singleLine = true,
-                            isError = uiState.nameError != null,
-                            supportingText = if (uiState.nameError != null) {
-                                { Text(uiState.nameError, color = CrimsonAlert) }
-                            } else null,
-                            shape = RoundedCornerShape(14.dp),
-                            colors = OutlinedTextFieldDefaults.colors(
-                                focusedBorderColor = EmeraldPrimary,
-                                unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant,
-                                focusedContainerColor = MaterialTheme.colorScheme.surface,
-                                unfocusedContainerColor = MaterialTheme.colorScheme.surface
-                            )
-                        )
-                    }
+                    OutlinedTextField(
+                        value = uiState.templateName,
+                        onValueChange = onNameChanged,
+                        label = { Text("Template Name") },
+                        placeholder = { Text("e.g., Push Day, HIIT Sprint, Leg Annihilation") },
+                        singleLine = true,
+                        isError = uiState.nameError != null,
+                        supportingText = if (uiState.nameError != null) {
+                            { Text(uiState.nameError, color = CrimsonAlert) }
+                        } else null,
+                        shape = RoundedCornerShape(12.dp),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = EmeraldPrimary,
+                            unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant,
+                            focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+                            unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant
+                        ),
+                        modifier = Modifier.fillMaxWidth()
+                    )
                 }
 
-                // Exercises Header + Add Button
+                // Section Header: Exercises + Add Button
                 item {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
                     ) {
-                        Column {
-                            Text(
-                                text = "EXERCISES (${uiState.exercises.size})",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                fontWeight = FontWeight.Bold
-                            )
-                            Text(
-                                text = "Customize sets, reps, rest & order",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
-                            )
-                        }
+                        Text(
+                            text = "EXERCISES (${uiState.exercises.size})",
+                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            letterSpacing = 1.sp
+                        )
 
                         OutlinedButton(
                             onClick = onOpenPicker,
@@ -302,8 +290,8 @@ fun TemplateDetailEditScreenContent(
                             onValuesChanged = { sets, reps, rest ->
                                 onUpdateExerciseValues(index, sets, reps, rest)
                             },
-                            onDurationChanged = { duration ->
-                                onUpdateSprintDuration(index, duration)
+                            onSprintValuesChanged = { rounds, duration, rest ->
+                                onUpdateSprintValues(index, rounds, duration, rest)
                             }
                         )
                     }
@@ -347,7 +335,7 @@ fun ConfigurableExerciseCard(
     onMoveDown: () -> Unit,
     onRemove: () -> Unit,
     onValuesChanged: (sets: Int, reps: Int, restSeconds: Int) -> Unit,
-    onDurationChanged: (Int) -> Unit = {},
+    onSprintValuesChanged: (rounds: Int, durationSeconds: Int, restSeconds: Int) -> Unit = { _, _, _ -> },
     modifier: Modifier = Modifier
 ) {
     Card(
@@ -385,19 +373,22 @@ fun ConfigurableExerciseCard(
                     }
                     Spacer(modifier = Modifier.width(8.dp))
                     Column {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text(
-                                text = item.name,
-                                style = MaterialTheme.typography.titleSmall,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onSurface
-                            )
+                        Text(
+                            text = item.name,
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            CategoryBadge(category = item.category)
                             if (item.isSprint) {
-                                Spacer(modifier = Modifier.width(6.dp))
-                                SprintBadge()
+                                SprintBadge(durationSeconds = item.targetDurationSeconds)
                             }
                         }
-                        CategoryBadge(category = item.category)
                     }
                 }
 
@@ -445,22 +436,48 @@ fun ConfigurableExerciseCard(
             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
             Spacer(modifier = Modifier.height(10.dp))
 
-            // Row 2: Steppers — Sprint shows only Duration, Standard shows Sets/Reps/Rest
+            // Row 2: Steppers — Sprint shows Rounds / Duration / Rest, Standard shows Sets / Reps / Rest
             if (item.isSprint) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.Center,
+                    horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     NumberStepper(
+                        label = "Rounds",
+                        value = item.targetSets,
+                        onValueChange = { newRounds ->
+                            onSprintValuesChanged(newRounds, item.targetDurationSeconds, item.restTimeSeconds)
+                        },
+                        minValue = 1,
+                        maxValue = 30,
+                        modifier = Modifier.weight(1f)
+                    )
+
+                    NumberStepper(
                         label = "Duration",
                         value = item.targetDurationSeconds,
-                        onValueChange = { onDurationChanged(it) },
+                        onValueChange = { newDuration ->
+                            onSprintValuesChanged(item.targetSets, newDuration, item.restTimeSeconds)
+                        },
                         minValue = 5,
                         maxValue = 600,
                         step = 5,
                         suffix = "s",
-                        modifier = Modifier.weight(1f)
+                        modifier = Modifier.weight(1.1f)
+                    )
+
+                    NumberStepper(
+                        label = "Rest",
+                        value = item.restTimeSeconds,
+                        onValueChange = { newRest ->
+                            onSprintValuesChanged(item.targetSets, item.targetDurationSeconds, newRest)
+                        },
+                        minValue = 0,
+                        maxValue = 600,
+                        step = 15,
+                        suffix = "s",
+                        modifier = Modifier.weight(1.1f)
                     )
                 }
             } else {

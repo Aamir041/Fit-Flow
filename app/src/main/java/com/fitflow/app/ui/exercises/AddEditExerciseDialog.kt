@@ -360,6 +360,23 @@ fun AddEditExerciseDialog(
 
                     Spacer(modifier = Modifier.height(6.dp))
 
+                    // Rounds stepper for sprint exercises
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.Center,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        NumberStepper(
+                            label = "Default Rounds",
+                            value = defaultSets,
+                            onValueChange = { defaultSets = it },
+                            minValue = 1,
+                            maxValue = 30
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(10.dp))
+
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -374,7 +391,7 @@ fun AddEditExerciseDialog(
                                 }
                             },
                             modifier = Modifier.weight(1f),
-                            label = { Text("Duration") },
+                            label = { Text("Duration per Round") },
                             placeholder = { Text("e.g., 30") },
                             singleLine = true,
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),

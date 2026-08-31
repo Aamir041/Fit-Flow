@@ -60,15 +60,17 @@ class TemplateEditViewModel(
     private val initialTemplateId: Long?
 ) : ViewModel() {
 
-    private val _formState = MutableStateFlow(FormState(isLoading = initialTemplateId != null && initialTemplateId > 0L))
+    private var currentTemplateId: Long = initialTemplateId ?: 0L
+
+    private val _formState = MutableStateFlow(FormState(isLoading = (initialTemplateId != null && initialTemplateId > 0L)))
     private val _pickerFilterState = MutableStateFlow(PickerFilterState())
 
     private val _saveSuccessEvent = MutableSharedFlow<Boolean>()
     val saveSuccessEvent: SharedFlow<Boolean> = _saveSuccessEvent.asSharedFlow()
 
     init {
-        if (initialTemplateId != null && initialTemplateId > 0L) {
-            loadTemplate(initialTemplateId)
+        if (currentTemplateId > 0L) {
+            loadTemplate(currentTemplateId)
         }
     }
 
@@ -77,6 +79,7 @@ class TemplateEditViewModel(
             _formState.update { it.copy(isLoading = true) }
             val template = repository.getTemplateWithExercisesOnce(id)
             if (template != null) {
+                currentTemplateId = template.template.id
                 val mapped = template.exercises
                     .sortedBy { it.templateExercise.orderIndex }
                     .map {
@@ -121,7 +124,7 @@ class TemplateEditViewModel(
         _filteredExercises
     ) { form, picker, filteredAvailable ->
         TemplateEditUiState(
-            templateId = initialTemplateId ?: 0L,
+            templateId = currentTemplateId,
             templateName = form.name,
             exercises = form.exercises,
             availableExercises = filteredAvailable,
@@ -289,6 +292,22 @@ class TemplateEditViewModel(
         }
     }
 
+    fun updateSprintValues(index: Int, rounds: Int, durationSeconds: Int, restSeconds: Int = 0) {
+        _formState.update { current ->
+            val list = current.exercises.toMutableList()
+            if (index in list.indices) {
+                list[index] = list[index].copy(
+                    targetSets = rounds,
+                    targetDurationSeconds = durationSeconds,
+                    restTimeSeconds = restSeconds
+                )
+                current.copy(exercises = list)
+            } else {
+                current
+            }
+        }
+    }
+
     fun saveTemplate() {
         val currentForm = _formState.value
         val name = currentForm.name.trim()
@@ -306,7 +325,7 @@ class TemplateEditViewModel(
         viewModelScope.launch {
             _formState.update { it.copy(isLoading = true) }
 
-            val isUnique = repository.isTemplateNameUnique(name, initialTemplateId ?: 0L)
+            val isUnique = repository.isTemplateNameUnique(name, currentTemplateId)
             if (!isUnique) {
                 _formState.update {
                     it.copy(
@@ -318,13 +337,13 @@ class TemplateEditViewModel(
             }
 
             val templateEntity = TemplateEntity(
-                id = initialTemplateId ?: 0L,
+                id = currentTemplateId,
                 name = name
             )
 
             val exerciseEntities = items.mapIndexed { idx, item ->
                 TemplateExerciseEntity(
-                    templateId = initialTemplateId ?: 0L,
+                    templateId = currentTemplateId,
                     exerciseId = item.exerciseId,
                     targetSets = item.targetSets,
                     targetReps = item.targetReps,

@@ -455,4 +455,173 @@ class FitFlowLogicTest {
         assertEquals("Bench Press", parsed.logs[0].exerciseName)
         assertTrue(parsed.foodLogs.isEmpty())
     }
+
+    @Test
+    fun testWorkoutSetRecordSerializationAndDeserialization() {
+        val sets = listOf(
+            com.fitflow.app.data.local.model.WorkoutSetRecord(setNumber = 1, reps = 10, weight = 60.0, isCompleted = true),
+            com.fitflow.app.data.local.model.WorkoutSetRecord(setNumber = 2, reps = 8, weight = 70.0, isCompleted = true),
+            com.fitflow.app.data.local.model.WorkoutSetRecord(setNumber = 3, reps = 6, weight = 80.0, isCompleted = false)
+        )
+
+        val jsonStr = com.fitflow.app.data.local.model.WorkoutSetRecord.serializeSetsToJson(sets)
+        assertTrue(jsonStr.contains("\"setNumber\":1"))
+        assertTrue(jsonStr.contains("\"reps\":10"))
+        assertTrue(jsonStr.contains("\"weight\":60"))
+
+        val parsed = com.fitflow.app.data.local.model.WorkoutSetRecord.parseSetsFromJson(jsonStr)
+        assertEquals(3, parsed.size)
+        assertEquals(1, parsed[0].setNumber)
+        assertEquals(10, parsed[0].reps)
+        assertEquals(60.0, parsed[0].weight, 0.001)
+        assertTrue(parsed[0].isCompleted)
+
+        assertEquals(3, parsed[2].setNumber)
+        assertEquals(6, parsed[2].reps)
+        assertEquals(80.0, parsed[2].weight, 0.001)
+        assertFalse(parsed[2].isCompleted)
+    }
+
+    @Test
+    fun testPerSetVolumeCalculation() {
+        val sets = listOf(
+            com.fitflow.app.data.local.model.WorkoutSetRecord(setNumber = 1, reps = 10, weight = 60.0, isCompleted = true), // 600
+            com.fitflow.app.data.local.model.WorkoutSetRecord(setNumber = 2, reps = 8, weight = 70.0, isCompleted = true),  // 560
+            com.fitflow.app.data.local.model.WorkoutSetRecord(setNumber = 3, reps = 6, weight = 80.0, isCompleted = false)  // not completed
+        )
+
+        val completedVolume = sets.filter { it.isCompleted }.sumOf { it.reps * it.weight }
+        assertEquals(1160.0, completedVolume, 0.001)
+    }
+
+    @Test
+    fun testHistoryBundleExportAndImportWithSetsData() {
+        val sets = listOf(
+            com.fitflow.app.data.local.model.WorkoutSetRecord(setNumber = 1, reps = 12, weight = 50.0, isCompleted = true),
+            com.fitflow.app.data.local.model.WorkoutSetRecord(setNumber = 2, reps = 10, weight = 55.0, isCompleted = true)
+        )
+        val setsJson = com.fitflow.app.data.local.model.WorkoutSetRecord.serializeSetsToJson(sets)
+
+        val bundle = com.fitflow.app.data.local.model.HistoryBundleExportJson(
+            version = 2,
+            app = "FitFlow",
+            logs = listOf(
+                com.fitflow.app.data.local.model.HistoryLogExport(
+                    date = "2026-08-31",
+                    exerciseName = "Incline Dumbbell Press",
+                    category = "Chest",
+                    actualSets = 2,
+                    actualReps = 10,
+                    actualWeight = 55.0,
+                    setsDataJson = setsJson
+                )
+            ),
+            foodLogs = emptyList()
+        )
+
+        val exportedJson = bundle.toJsonString()
+        assertTrue(exportedJson.contains("setsDataJson"))
+
+        val parsed = com.fitflow.app.data.local.model.HistoryBundleExportJson.fromJsonString(exportedJson)
+        assertEquals(1, parsed.logs.size)
+        val logExport = parsed.logs[0]
+        assertEquals("Incline Dumbbell Press", logExport.exerciseName)
+
+        val restoredSets = com.fitflow.app.data.local.model.WorkoutSetRecord.parseSetsFromJson(logExport.setsDataJson)
+        assertEquals(2, restoredSets.size)
+        assertEquals(12, restoredSets[0].reps)
+        assertEquals(50.0, restoredSets[0].weight, 0.001)
+        assertEquals(10, restoredSets[1].reps)
+        assertEquals(55.0, restoredSets[1].weight, 0.001)
+    }
+
+    @Test
+    fun testTemplateNameUniquenessLogicWhenEditingSelf() {
+        data class MockTemplate(val id: Long, val name: String)
+        val existingTemplates = listOf(
+            MockTemplate(id = 1L, name = "Push Day"),
+            MockTemplate(id = 2L, name = "Pull Day")
+        )
+
+        fun isTemplateNameUnique(name: String, currentTemplateId: Long): Boolean {
+            val matching = existingTemplates.firstOrNull { it.name.equals(name.trim(), ignoreCase = true) }
+            return matching == null || matching.id == currentTemplateId
+        }
+
+        // Editing template 1 and keeping its name "Push Day" -> should be valid (not duplicate)
+        assertTrue(isTemplateNameUnique("Push Day", currentTemplateId = 1L))
+
+        // Editing template 1 and renaming to existing template 2 "Pull Day" -> should be rejected
+        assertFalse(isTemplateNameUnique("Pull Day", currentTemplateId = 1L))
+
+        // Creating a new template (currentTemplateId = 0L) with existing name "Push Day" -> should be rejected
+        assertFalse(isTemplateNameUnique("Push Day", currentTemplateId = 0L))
+
+        // Creating a new template with new name "Leg Day" -> should be valid
+        assertTrue(isTemplateNameUnique("Leg Day", currentTemplateId = 0L))
+    }
+
+    @Test
+    fun testSprintRoundsAndDurationModeling() {
+        val sprintExercise = ExerciseEntity(
+            id = 200L,
+            name = "Hill Sprints",
+            category = "Cardio",
+            defaultSets = 5, // 5 default rounds
+            defaultReps = 0,
+            isCustom = false,
+            isSprint = true,
+            defaultDurationSeconds = 30
+        )
+
+        // Template item with 5 rounds, 30s per round, 45s rest
+        val templateItem = EditableExerciseItem(
+            exerciseId = sprintExercise.id,
+            name = sprintExercise.name,
+            category = sprintExercise.category,
+            targetSets = sprintExercise.defaultSets,
+            targetReps = 0,
+            restTimeSeconds = 45,
+            isSprint = true,
+            targetDurationSeconds = sprintExercise.defaultDurationSeconds
+        )
+
+        assertEquals(5, templateItem.targetSets)
+        assertEquals(30, templateItem.targetDurationSeconds)
+        assertEquals(45, templateItem.restTimeSeconds)
+
+        // Today UI model mapping for 5 sprint rounds
+        val rounds = (1..templateItem.targetSets).map { roundNum ->
+            com.fitflow.app.ui.home.WorkoutSetUiModel(
+                setNumber = roundNum,
+                reps = templateItem.targetDurationSeconds,
+                weight = 0.0,
+                isCompleted = roundNum <= 3
+            )
+        }
+
+        val logItem = ExerciseLogItem(
+            templateExerciseId = 10L,
+            exerciseId = sprintExercise.id,
+            name = sprintExercise.name,
+            category = sprintExercise.category,
+            targetSets = templateItem.targetSets,
+            targetReps = 0,
+            restTimeSeconds = templateItem.restTimeSeconds,
+            actualSets = 5,
+            actualReps = 0,
+            actualWeight = 0.0,
+            isCompleted = false,
+            isSprint = true,
+            targetDurationSeconds = templateItem.targetDurationSeconds,
+            actualDurationSeconds = templateItem.targetDurationSeconds,
+            sets = rounds
+        )
+
+        assertEquals(5, logItem.totalSetsCount)
+        assertEquals(3, logItem.completedSetsCount)
+        assertEquals(30, logItem.sets[0].reps) // 30s duration stored in reps
+        assertTrue(logItem.sets[0].isCompleted)
+        assertFalse(logItem.sets[4].isCompleted)
+    }
 }
