@@ -3,12 +3,20 @@
 All notable changes to the Fit-Flow project will be documented in this file.
 
 ### Added
-- **Workout History Management**:
-  - Implemented **Export History (JSON)** to backup all workout logs to the device storage.
-  - Implemented **Import History (JSON)** to restore workout logs, with automatic custom exercise creation for unrecognized exercises.
-  - Added **Clear All History** functionality with a safety confirmation dialog.
+- **Food & Nutrition Logging Tab** ([FoodScreen.kt](file:///d:/Fit-Flow/app/src/main/java/com/fitflow/app/ui/food/FoodScreen.kt), [FoodViewModel.kt](file:///d:/Fit-Flow/app/src/main/java/com/fitflow/app/ui/food/FoodViewModel.kt), [AddEditFoodDialog.kt](file:///d:/Fit-Flow/app/src/main/java/com/fitflow/app/ui/food/AddEditFoodDialog.kt)):
+  - Added a dedicated bottom navigation tab for logging daily food intake and calories for the present date only.
+  - Interactive **Log Food** dialog with input for food name, quantity, unit selection (Grams `g`, Milligrams `mg`, Kilograms `kg`, Litres `l`, Millilitres `ml`, `unit`, `candy`, `piece`, `serving`, `cup`, `tbsp`, `tsp`, or custom unit text), calories (kcal), and time of day / meal categorization (Breakfast, Lunch, Dinner, Snack, Pre-Workout, Post-Workout).
+  - Daily energy intake summary card calculating total calories consumed and total logged items for today.
+  - Grouped meal cards by time of day with quick edit and delete options.
+  - Stored in Room database with [FoodLogEntity.kt](file:///d:/Fit-Flow/app/src/main/java/com/fitflow/app/data/local/entity/FoodLogEntity.kt) and [FoodLogDao.kt](file:///d:/Fit-Flow/app/src/main/java/com/fitflow/app/data/local/dao/FoodLogDao.kt).
+- **Daily Food History Integration in History Screen** ([HistoryScreen.kt](file:///d:/Fit-Flow/app/src/main/java/com/fitflow/app/ui/history/HistoryScreen.kt)):
+  - Consistency heatmap illuminates green solely when exercise workouts were performed on that date.
+  - Tapping any date on the consistency heatmap opens the scrollable details dialog with dedicated sections for both logged exercises and food items with quantities, units, and calories.
+- **Workout & Food History Management** ([HistoryExportJson.kt](file:///d:/Fit-Flow/app/src/main/java/com/fitflow/app/data/local/model/HistoryExportJson.kt), [FitFlowRepository.kt](file:///d:/Fit-Flow/app/src/main/java/com/fitflow/app/data/repository/FitFlowRepository.kt)):
+  - Implemented **Export History (JSON)** to backup all workout logs and food nutrition logs to device storage in a unified JSON bundle (`HistoryBundleExportJson` version 2).
+  - Implemented **Import History (JSON)** with backward compatibility for version 1 files, restoring all workouts (with automatic custom exercise creation) and food logs.
+  - Added **Clear All History** functionality with a safety confirmation dialog, clearing both workout and food logs.
   - Enhanced [HistoryScreen.kt](file:///d:/Fit-Flow/app/src/main/java/com/fitflow/app/ui/history/HistoryScreen.kt) with a "More Options" menu and Snackbar feedback.
-  - Added [HistoryExportJson.kt](file:///d:/Fit-Flow/app/src/main/java/com/fitflow/app/data/local/model/HistoryExportJson.kt) for robust history data serialization.
 - **Workout Templates Bulk JSON Export & Import Utility**:
   - Updated JSON models in [TemplateExportJson.kt](file:///d:/Fit-Flow/app/src/main/java/com/fitflow/app/data/local/model/TemplateExportJson.kt) to support bundle exports (`TemplateBundleExportJson`) containing all workout templates at once, with backward-compatible single template imports.
   - Implemented **Export All Templates (JSON)** in [TemplatesScreen.kt](file:///d:/Fit-Flow/app/src/main/java/com/fitflow/app/ui/templates/TemplatesScreen.kt) top bar menu to directly save all templates to the device file system via Android's `CreateDocument` storage launcher.

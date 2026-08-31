@@ -21,10 +21,12 @@ class HistoryViewModel(
 
     val uiState: StateFlow<HistoryUiState> = combine(
         repository.getCompletedLogs(),
+        repository.getAllFoodLogs(),
         _messageState
-    ) { logs, messagePair ->
-        val grouped = logs.groupBy { it.log.date }
-        val distinctDatesCount = grouped.keys.size
+    ) { logs, foodLogs, messagePair ->
+        val groupedWorkouts = logs.groupBy { it.log.date }
+        val groupedFoods = foodLogs.groupBy { it.date }
+        val distinctDatesCount = groupedWorkouts.keys.size
         val totalExercises = logs.size
         val totalVolume = logs.filter { !it.exercise.isSprint }.sumOf {
             it.log.actualSets * it.log.actualReps * it.log.actualWeight
@@ -35,7 +37,8 @@ class HistoryViewModel(
             totalWorkoutsCount = distinctDatesCount,
             totalExercisesLogged = totalExercises,
             totalVolumeKg = (totalVolume * 10).toInt() / 10.0,
-            groupedByDate = grouped,
+            groupedByDate = groupedWorkouts,
+            foodLogsByDate = groupedFoods,
             isLoading = false,
             message = messagePair.first,
             isSuccess = messagePair.second

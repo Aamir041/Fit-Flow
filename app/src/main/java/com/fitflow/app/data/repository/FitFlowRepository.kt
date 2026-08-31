@@ -3,9 +3,11 @@ package com.fitflow.app.data.repository
 import com.fitflow.app.data.local.FitFlowDatabase
 import com.fitflow.app.data.local.entity.DayAssignmentEntity
 import com.fitflow.app.data.local.entity.ExerciseEntity
+import com.fitflow.app.data.local.entity.FoodLogEntity
 import com.fitflow.app.data.local.entity.TemplateEntity
 import com.fitflow.app.data.local.entity.TemplateExerciseEntity
 import com.fitflow.app.data.local.entity.WorkoutLogEntity
+import com.fitflow.app.data.local.model.FoodLogExport
 import com.fitflow.app.data.local.relation.DayWithTemplate
 import com.fitflow.app.data.local.relation.TemplateWithExercises
 import com.fitflow.app.data.local.relation.WorkoutLogWithExercise
@@ -72,6 +74,18 @@ interface FitFlowRepository {
     suspend fun importHistoryFromJson(jsonString: String): Result<Int>
     suspend fun clearAllHistory()
 
+    // Food Logs
+    fun getFoodLogsForDate(date: String): Flow<List<FoodLogEntity>>
+    suspend fun getFoodLogsForDateOnce(date: String): List<FoodLogEntity>
+    fun getAllFoodLogs(): Flow<List<FoodLogEntity>>
+    fun getDistinctFoodDates(): Flow<List<String>>
+    fun getTotalCaloriesForDate(date: String): Flow<Int?>
+    suspend fun insertFoodLog(foodLog: FoodLogEntity): Long
+    suspend fun updateFoodLog(foodLog: FoodLogEntity)
+    suspend fun deleteFoodLog(foodLog: FoodLogEntity)
+    suspend fun deleteFoodLogById(id: Long)
+    suspend fun deleteAllFoodLogs()
+
     // Initializer
     suspend fun ensureSeeded()
 }
@@ -84,6 +98,7 @@ class FitFlowRepositoryImpl(
     private val templateDao = database.templateDao()
     private val dayAssignmentDao = database.dayAssignmentDao()
     private val workoutLogDao = database.workoutLogDao()
+    private val foodLogDao = database.foodLogDao()
 
     override suspend fun ensureSeeded() = withContext(Dispatchers.IO) {
         FitFlowDatabase.populateDatabase(database)
@@ -354,11 +369,26 @@ class FitFlowRepositoryImpl(
                 timestamp = logWithEx.log.timestamp
             )
         }
+
+        val allFoodLogs = foodLogDao.getAllFoodLogsOnce()
+        val exportFoodLogs = allFoodLogs.map { food ->
+            FoodLogExport(
+                date = food.date,
+                foodName = food.foodName,
+                quantity = food.quantity,
+                unit = food.unit,
+                calories = food.calories,
+                mealTime = food.mealTime,
+                timestamp = food.timestamp
+            )
+        }
+
         val bundle = HistoryBundleExportJson(
-            version = 1,
+            version = 2,
             app = "FitFlow",
             exportedAt = System.currentTimeMillis(),
-            logs = exportLogs
+            logs = exportLogs,
+            foodLogs = exportFoodLogs
         )
         bundle.toJsonString()
     }
@@ -368,11 +398,13 @@ class FitFlowRepositoryImpl(
     override suspend fun importHistoryFromJson(jsonString: String): Result<Int> = withContext(Dispatchers.IO) {
         try {
             val bundle = HistoryBundleExportJson.fromJsonString(jsonString)
-            if (bundle.logs.isEmpty()) {
-                return@withContext Result.failure(IllegalArgumentException("No history logs found in JSON file"))
+            if (bundle.logs.isEmpty() && bundle.foodLogs.isEmpty()) {
+                return@withContext Result.failure(IllegalArgumentException("No history or food logs found in JSON file"))
             }
 
             var importedCount = 0
+
+            // Import Workout Logs
             for (exportLog in bundle.logs) {
                 val exerciseName = exportLog.exerciseName.trim()
                 if (exerciseName.isBlank()) continue
@@ -405,6 +437,25 @@ class FitFlowRepositoryImpl(
                 importedCount++
             }
 
+            // Import Food Logs
+            for (exportFood in bundle.foodLogs) {
+                val foodName = exportFood.foodName.trim()
+                if (foodName.isBlank() || exportFood.date.isBlank()) continue
+
+                val foodEntity = FoodLogEntity(
+                    date = exportFood.date,
+                    foodName = foodName,
+                    quantity = exportFood.quantity,
+                    unit = exportFood.unit,
+                    calories = exportFood.calories,
+                    mealTime = exportFood.mealTime,
+                    timestamp = exportFood.timestamp
+                )
+
+                foodLogDao.insertFoodLog(foodEntity)
+                importedCount++
+            }
+
             Result.success(importedCount)
         } catch (e: Exception) {
             Result.failure(e)
@@ -413,5 +464,43 @@ class FitFlowRepositoryImpl(
 
     override suspend fun clearAllHistory() = withContext(Dispatchers.IO) {
         workoutLogDao.deleteAllLogs()
+        foodLogDao.deleteAllFoodLogs()
+    }
+
+    // Food Logs
+    override fun getFoodLogsForDate(date: String): Flow<List<FoodLogEntity>> =
+        foodLogDao.getFoodLogsForDate(date)
+
+    override suspend fun getFoodLogsForDateOnce(date: String): List<FoodLogEntity> = withContext(Dispatchers.IO) {
+        foodLogDao.getFoodLogsForDateOnce(date)
+    }
+
+    override fun getAllFoodLogs(): Flow<List<FoodLogEntity>> =
+        foodLogDao.getAllFoodLogs()
+
+    override fun getDistinctFoodDates(): Flow<List<String>> =
+        foodLogDao.getDistinctFoodDates()
+
+    override fun getTotalCaloriesForDate(date: String): Flow<Int?> =
+        foodLogDao.getTotalCaloriesForDate(date)
+
+    override suspend fun insertFoodLog(foodLog: FoodLogEntity): Long = withContext(Dispatchers.IO) {
+        foodLogDao.insertFoodLog(foodLog)
+    }
+
+    override suspend fun updateFoodLog(foodLog: FoodLogEntity) = withContext(Dispatchers.IO) {
+        foodLogDao.updateFoodLog(foodLog)
+    }
+
+    override suspend fun deleteFoodLog(foodLog: FoodLogEntity) = withContext(Dispatchers.IO) {
+        foodLogDao.deleteFoodLog(foodLog)
+    }
+
+    override suspend fun deleteFoodLogById(id: Long) = withContext(Dispatchers.IO) {
+        foodLogDao.deleteFoodLogById(id)
+    }
+
+    override suspend fun deleteAllFoodLogs() = withContext(Dispatchers.IO) {
+        foodLogDao.deleteAllFoodLogs()
     }
 }

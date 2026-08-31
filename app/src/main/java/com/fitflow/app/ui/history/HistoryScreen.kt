@@ -66,6 +66,7 @@ import androidx.compose.material.icons.filled.ChevronLeft
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.ui.text.style.TextAlign
 import com.fitflow.app.data.local.entity.ExerciseEntity
+import com.fitflow.app.data.local.entity.FoodLogEntity
 import com.fitflow.app.data.local.entity.WorkoutLogEntity
 import com.fitflow.app.data.local.relation.WorkoutLogWithExercise
 import com.fitflow.app.ui.components.CategoryBadge
@@ -235,6 +236,7 @@ fun HistoryScreenContent(
                     MonthContributionHeatmap(
                         yearMonth = selectedMonth,
                         groupedByDate = uiState.groupedByDate,
+                        foodLogsByDate = uiState.foodLogsByDate,
                         onPreviousMonth = { selectedMonth = selectedMonth.minusMonths(1) },
                         onNextMonth = { selectedMonth = selectedMonth.plusMonths(1) },
                         onDateSelected = { dateKey ->
@@ -249,12 +251,14 @@ fun HistoryScreenContent(
             }
         }
 
-        // Dialog showing history of exercises performed on selected date
+        // Dialog showing history of exercises & foods on selected date
         selectedDateForDetails?.let { dateKey ->
             val logsForDay = uiState.groupedByDate[dateKey] ?: emptyList()
+            val foodLogsForDay = uiState.foodLogsByDate[dateKey] ?: emptyList()
             DayWorkoutDetailsDialog(
                 dateKey = dateKey,
                 logs = logsForDay,
+                foodLogs = foodLogsForDay,
                 onDismiss = { selectedDateForDetails = null }
             )
         }
@@ -265,6 +269,7 @@ fun HistoryScreenContent(
 fun MonthContributionHeatmap(
     yearMonth: YearMonth,
     groupedByDate: Map<String, List<WorkoutLogWithExercise>>,
+    foodLogsByDate: Map<String, List<FoodLogEntity>> = emptyMap(),
     onPreviousMonth: () -> Unit,
     onNextMonth: () -> Unit,
     onDateSelected: (String) -> Unit,
@@ -275,7 +280,7 @@ fun MonthContributionHeatmap(
     val today = LocalDate.now()
     val isCurrentMonth = yearMonth == YearMonth.from(today)
 
-    // Calculate workouts count in this month
+    // Calculate active workout days count in this month
     val monthActiveDaysCount = (1..daysInMonth).count { day ->
         val dateKey = String.format("%04d-%02d-%02d", yearMonth.year, yearMonth.monthValue, day)
         groupedByDate.containsKey(dateKey) && groupedByDate[dateKey]?.isNotEmpty() == true
@@ -339,7 +344,7 @@ fun MonthContributionHeatmap(
             Spacer(modifier = Modifier.height(6.dp))
 
             Text(
-                text = "$monthActiveDaysCount active ${if (monthActiveDaysCount == 1) "day" else "days"} • Tap any date to view workout",
+                text = "$monthActiveDaysCount active ${if (monthActiveDaysCount == 1) "day" else "days"} • Tap any date to view details",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -370,6 +375,7 @@ fun MonthContributionHeatmap(
                                 )
                                 val logsForDay = groupedByDate[dateKey]
                                 val workoutCount = logsForDay?.size ?: 0
+
                                 val isLit = workoutCount > 0
                                 val isToday = isCurrentMonth && dayNumber == today.dayOfMonth
 
@@ -484,6 +490,7 @@ fun MonthContributionHeatmap(
 fun DayWorkoutDetailsDialog(
     dateKey: String,
     logs: List<WorkoutLogWithExercise>,
+    foodLogs: List<FoodLogEntity> = emptyList(),
     onDismiss: () -> Unit
 ) {
     val formattedDate = try {
@@ -492,6 +499,11 @@ fun DayWorkoutDetailsDialog(
     } catch (e: Exception) {
         dateKey
     }
+
+    val totalCalories = foodLogs.sumOf { it.calories }
+    val totalWorkouts = logs.size
+    val totalFoods = foodLogs.size
+    val isEmpty = totalWorkouts == 0 && totalFoods == 0
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -505,15 +517,20 @@ fun DayWorkoutDetailsDialog(
                 )
                 Spacer(modifier = Modifier.height(2.dp))
                 Text(
-                    text = if (logs.isEmpty()) "Rest day / No workouts logged" else "${logs.size} movements completed",
+                    text = when {
+                        isEmpty -> "Rest day / No logs recorded"
+                        totalWorkouts > 0 && totalFoods > 0 -> "$totalWorkouts movements • $totalCalories kcal"
+                        totalWorkouts > 0 -> "$totalWorkouts movements completed"
+                        else -> "$totalFoods food items • $totalCalories kcal"
+                    },
                     style = MaterialTheme.typography.labelSmall,
-                    color = if (logs.isEmpty()) MaterialTheme.colorScheme.onSurfaceVariant else EmeraldPrimary,
+                    color = if (isEmpty) MaterialTheme.colorScheme.onSurfaceVariant else EmeraldPrimary,
                     fontWeight = FontWeight.SemiBold
                 )
             }
         },
         text = {
-            if (logs.isEmpty()) {
+            if (isEmpty) {
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -521,7 +538,7 @@ fun DayWorkoutDetailsDialog(
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
-                        text = "No workout logs recorded for this day.",
+                        text = "No workouts or food logs recorded for this day.",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         textAlign = TextAlign.Center
@@ -532,64 +549,149 @@ fun DayWorkoutDetailsDialog(
                     modifier = Modifier
                         .fillMaxWidth()
                         .verticalScroll(rememberScrollState()),
-                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                    verticalArrangement = Arrangement.spacedBy(14.dp)
                 ) {
-                    logs.forEach { item ->
-                        val weightFormatted = if (item.log.actualWeight % 1.0 == 0.0) {
-                            "${item.log.actualWeight.toInt()}"
-                        } else {
-                            "${item.log.actualWeight}"
-                        }
-
+                    // 1. Workouts Section
+                    if (logs.isNotEmpty()) {
                         Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clip(RoundedCornerShape(12.dp))
-                                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
-                                .border(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f), RoundedCornerShape(12.dp))
-                                .padding(12.dp),
+                            modifier = Modifier.fillMaxWidth(),
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
-                            Column(modifier = Modifier.weight(1f)) {
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Text(
-                                        text = item.exercise.name,
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        fontWeight = FontWeight.Bold,
-                                        color = MaterialTheme.colorScheme.onSurface
-                                    )
-                                    if (item.exercise.isSprint) {
-                                        Spacer(modifier = Modifier.width(6.dp))
-                                        SprintBadge(durationSeconds = item.log.actualDurationSeconds)
+                            Text(
+                                text = "WORKOUTS (${logs.size})",
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.Bold,
+                                color = EmeraldPrimary,
+                                letterSpacing = 1.sp
+                            )
+                        }
+
+                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            logs.forEach { item ->
+                                val weightFormatted = if (item.log.actualWeight % 1.0 == 0.0) {
+                                    "${item.log.actualWeight.toInt()}"
+                                } else {
+                                    "${item.log.actualWeight}"
+                                }
+
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clip(RoundedCornerShape(12.dp))
+                                        .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+                                        .border(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f), RoundedCornerShape(12.dp))
+                                        .padding(12.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                            Text(
+                                                text = item.exercise.name,
+                                                style = MaterialTheme.typography.bodyMedium,
+                                                fontWeight = FontWeight.Bold,
+                                                color = MaterialTheme.colorScheme.onSurface
+                                            )
+                                            if (item.exercise.isSprint) {
+                                                Spacer(modifier = Modifier.width(6.dp))
+                                                SprintBadge(durationSeconds = item.log.actualDurationSeconds)
+                                            }
+                                        }
+                                        Spacer(modifier = Modifier.height(4.dp))
+                                        CategoryBadge(category = item.exercise.category)
+                                    }
+
+                                    Column(horizontalAlignment = Alignment.End) {
+                                        if (item.exercise.isSprint) {
+                                            Text(
+                                                text = "${item.log.actualDurationSeconds}s sprint",
+                                                style = MaterialTheme.typography.bodySmall,
+                                                fontWeight = FontWeight.Bold,
+                                                color = MaterialTheme.colorScheme.onSurface
+                                            )
+                                        } else {
+                                            Text(
+                                                text = "${item.log.actualSets} sets × ${item.log.actualReps} reps",
+                                                style = MaterialTheme.typography.bodySmall,
+                                                fontWeight = FontWeight.Bold,
+                                                color = MaterialTheme.colorScheme.onSurface
+                                            )
+                                            if (item.log.actualWeight > 0) {
+                                                Text(
+                                                    text = "$weightFormatted kg",
+                                                    style = MaterialTheme.typography.labelSmall,
+                                                    color = CyanAccent
+                                                )
+                                            }
+                                        }
                                     }
                                 }
-                                Spacer(modifier = Modifier.height(4.dp))
-                                CategoryBadge(category = item.exercise.category)
                             }
+                        }
+                    }
 
-                            Column(horizontalAlignment = Alignment.End) {
-                                if (item.exercise.isSprint) {
-                                    Text(
-                                        text = "${item.log.actualDurationSeconds}s sprint",
-                                        style = MaterialTheme.typography.bodySmall,
-                                        fontWeight = FontWeight.Bold,
-                                        color = MaterialTheme.colorScheme.onSurface
-                                    )
+                    // 2. Food / Nutrition Section
+                    if (foodLogs.isNotEmpty()) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text(
+                                text = "FOOD & NUTRITION (${foodLogs.size})",
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.Bold,
+                                color = CyanAccent,
+                                letterSpacing = 1.sp
+                            )
+                            Text(
+                                text = "$totalCalories kcal",
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.ExtraBold,
+                                color = CyanAccent
+                            )
+                        }
+
+                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            foodLogs.forEach { food ->
+                                val qtyFormatted = if (food.quantity % 1.0 == 0.0) {
+                                    food.quantity.toInt().toString()
                                 } else {
-                                    Text(
-                                        text = "${item.log.actualSets} sets × ${item.log.actualReps} reps",
-                                        style = MaterialTheme.typography.bodySmall,
-                                        fontWeight = FontWeight.Bold,
-                                        color = MaterialTheme.colorScheme.onSurface
-                                    )
-                                    if (item.log.actualWeight > 0) {
+                                    food.quantity.toString()
+                                }
+
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clip(RoundedCornerShape(12.dp))
+                                        .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+                                        .border(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f), RoundedCornerShape(12.dp))
+                                        .padding(12.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Column(modifier = Modifier.weight(1f)) {
                                         Text(
-                                            text = "$weightFormatted kg",
-                                            style = MaterialTheme.typography.labelSmall,
-                                            color = CyanAccent
+                                            text = food.foodName,
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            fontWeight = FontWeight.Bold,
+                                            color = MaterialTheme.colorScheme.onSurface
+                                        )
+                                        Spacer(modifier = Modifier.height(2.dp))
+                                        Text(
+                                            text = "$qtyFormatted ${food.unit} • ${food.mealTime}",
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
                                         )
                                     }
+
+                                    Text(
+                                        text = "${food.calories} kcal",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        fontWeight = FontWeight.ExtraBold,
+                                        color = CyanAccent
+                                    )
                                 }
                             }
                         }

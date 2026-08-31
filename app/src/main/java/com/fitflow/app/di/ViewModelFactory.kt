@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import com.fitflow.app.data.repository.FitFlowRepository
 import com.fitflow.app.ui.exercises.ExerciseLibraryViewModel
+import com.fitflow.app.ui.food.FoodViewModel
 import com.fitflow.app.ui.history.HistoryViewModel
 import com.fitflow.app.ui.home.HomeViewModel
 import com.fitflow.app.ui.schedule.ScheduleViewModel
@@ -20,6 +21,9 @@ class ViewModelFactory(
         return when {
             modelClass.isAssignableFrom(HomeViewModel::class.java) -> {
                 HomeViewModel(repository) as T
+            }
+            modelClass.isAssignableFrom(FoodViewModel::class.java) -> {
+                FoodViewModel(repository) as T
             }
             modelClass.isAssignableFrom(TemplatesViewModel::class.java) -> {
                 TemplatesViewModel(repository) as T
