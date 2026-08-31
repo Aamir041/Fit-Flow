@@ -3,12 +3,14 @@ package com.fitflow.app.ui.navigation
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.FitnessCenter
+import androidx.compose.material.icons.filled.FolderCopy
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Layers
 import androidx.compose.material.icons.filled.ListAlt
 import androidx.compose.material.icons.filled.Restaurant
 import androidx.compose.material.icons.outlined.CalendarMonth
 import androidx.compose.material.icons.outlined.FitnessCenter
+import androidx.compose.material.icons.outlined.FolderCopy
 import androidx.compose.material.icons.outlined.History
 import androidx.compose.material.icons.outlined.Layers
 import androidx.compose.material.icons.outlined.ListAlt
@@ -33,6 +35,13 @@ sealed class Screen(
         title = "Food",
         selectedIcon = Icons.Filled.Restaurant,
         unselectedIcon = Icons.Outlined.Restaurant
+    )
+
+    data object Library : Screen(
+        route = "library",
+        title = "Library",
+        selectedIcon = Icons.Filled.FolderCopy,
+        unselectedIcon = Icons.Outlined.FolderCopy
     )
 
     data object Templates : Screen(
@@ -80,8 +89,8 @@ sealed class Screen(
 val BottomNavItems = listOf(
     Screen.Home,
     Screen.Food,
-    Screen.Templates,
+    Screen.Library,
     Screen.Schedule,
-    Screen.ExerciseLibrary,
     Screen.History
 )
+

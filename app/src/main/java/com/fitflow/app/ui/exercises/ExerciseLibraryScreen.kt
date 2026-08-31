@@ -63,6 +63,7 @@ import com.fitflow.app.ui.theme.FitFlowTheme
 @Composable
 fun ExerciseLibraryScreen(
     viewModel: ExerciseLibraryViewModel,
+    onNavigateBack: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -80,6 +81,7 @@ fun ExerciseLibraryScreen(
         onPromptDelete = { viewModel.promptDelete(it) },
         onConfirmDelete = { viewModel.confirmDelete() },
         onDismissDelete = { viewModel.dismissDeletePrompt() },
+        onNavigateBack = onNavigateBack,
         modifier = modifier
     )
 }
@@ -96,13 +98,15 @@ fun ExerciseLibraryScreenContent(
     onPromptDelete: (ExerciseEntity) -> Unit,
     onConfirmDelete: () -> Unit,
     onDismissDelete: () -> Unit,
+    onNavigateBack: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     Scaffold(
         topBar = {
             FitFlowTopBar(
                 title = "Exercise Library",
-                subtitle = "${uiState.totalCount} total movements"
+                subtitle = "${uiState.totalCount} total movements",
+                onBackClick = onNavigateBack
             )
         },
         floatingActionButton = {

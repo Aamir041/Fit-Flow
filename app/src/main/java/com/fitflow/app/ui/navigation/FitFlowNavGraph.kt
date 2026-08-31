@@ -24,6 +24,7 @@ import com.fitflow.app.ui.history.HistoryScreen
 import com.fitflow.app.ui.history.HistoryViewModel
 import com.fitflow.app.ui.home.HomeScreen
 import com.fitflow.app.ui.home.HomeViewModel
+import com.fitflow.app.ui.library.LibraryHubScreen
 import com.fitflow.app.ui.schedule.ScheduleScreen
 import com.fitflow.app.ui.schedule.ScheduleViewModel
 import com.fitflow.app.ui.templates.TemplateDetailEditScreen
@@ -70,8 +71,42 @@ fun FitFlowNavGraph(
             FoodScreen(viewModel = foodViewModel)
         }
 
-        // Templates Screen
-        composable(route = Screen.Templates.route) {
+        // Unified Library Hub Screen
+        composable(route = Screen.Library.route) {
+            val templatesViewModel: TemplatesViewModel = viewModel(
+                factory = ViewModelFactory(repository)
+            )
+            val libraryViewModel: ExerciseLibraryViewModel = viewModel(
+                factory = ViewModelFactory(repository)
+            )
+            LibraryHubScreen(
+                templatesViewModel = templatesViewModel,
+                exercisesViewModel = libraryViewModel,
+                onNavigateToTemplates = {
+                    navController.navigate(Screen.Templates.route)
+                },
+                onNavigateToExercises = {
+                    navController.navigate(Screen.ExerciseLibrary.route)
+                }
+            )
+        }
+
+        // Templates Screen (Inner screen from Library Hub)
+        composable(
+            route = Screen.Templates.route,
+            enterTransition = {
+                slideIntoContainer(
+                    AnimatedContentTransitionScope.SlideDirection.Start,
+                    animationSpec = tween(300)
+                ) + fadeIn(animationSpec = tween(300))
+            },
+            popExitTransition = {
+                slideOutOfContainer(
+                    AnimatedContentTransitionScope.SlideDirection.End,
+                    animationSpec = tween(300)
+                ) + fadeOut(animationSpec = tween(300))
+            }
+        ) {
             val templatesViewModel: TemplatesViewModel = viewModel(
                 factory = ViewModelFactory(repository)
             )
@@ -82,7 +117,8 @@ fun FitFlowNavGraph(
                 },
                 onEditTemplate = { templateId ->
                     navController.navigate(Screen.TemplateEdit.createRoute(templateId))
-                }
+                },
+                onNavigateBack = { navController.popBackStack() }
             )
         }
 
@@ -126,12 +162,29 @@ fun FitFlowNavGraph(
             ScheduleScreen(viewModel = scheduleViewModel)
         }
 
-        // Exercise Library Screen
-        composable(route = Screen.ExerciseLibrary.route) {
+        // Exercise Library Screen (Inner screen from Library Hub)
+        composable(
+            route = Screen.ExerciseLibrary.route,
+            enterTransition = {
+                slideIntoContainer(
+                    AnimatedContentTransitionScope.SlideDirection.Start,
+                    animationSpec = tween(300)
+                ) + fadeIn(animationSpec = tween(300))
+            },
+            popExitTransition = {
+                slideOutOfContainer(
+                    AnimatedContentTransitionScope.SlideDirection.End,
+                    animationSpec = tween(300)
+                ) + fadeOut(animationSpec = tween(300))
+            }
+        ) {
             val libraryViewModel: ExerciseLibraryViewModel = viewModel(
                 factory = ViewModelFactory(repository)
             )
-            ExerciseLibraryScreen(viewModel = libraryViewModel)
+            ExerciseLibraryScreen(
+                viewModel = libraryViewModel,
+                onNavigateBack = { navController.popBackStack() }
+            )
         }
 
         // History & Stats Screen

@@ -98,6 +98,7 @@ fun TemplatesScreen(
     viewModel: TemplatesViewModel,
     onCreateTemplate: () -> Unit,
     onEditTemplate: (Long) -> Unit,
+    onNavigateBack: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -173,6 +174,7 @@ fun TemplatesScreen(
         onExportAllTemplates = { viewModel.exportAllTemplates() },
         onImportFromFile = { importFileLauncher.launch("application/json") },
         onImportDirectJson = { jsonStr -> viewModel.importTemplateFromJson(jsonStr) },
+        onNavigateBack = onNavigateBack,
         modifier = modifier
     )
 }
@@ -189,6 +191,7 @@ fun TemplatesScreenContent(
     onExportAllTemplates: () -> Unit,
     onImportFromFile: () -> Unit,
     onImportDirectJson: (String) -> Unit,
+    onNavigateBack: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     var isImportDialogOpen by remember { mutableStateOf(false) }
@@ -202,6 +205,7 @@ fun TemplatesScreenContent(
             FitFlowTopBar(
                 title = "Workout Templates",
                 subtitle = "${uiState.templates.size} saved templates",
+                onBackClick = onNavigateBack,
                 actions = {
                     Box {
                         IconButton(onClick = { topMenuExpanded = true }) {

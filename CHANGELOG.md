@@ -3,6 +3,11 @@
 All notable changes to the Fit-Flow project will be documented in this file.
 
 ### Added
+- **Unified Library Hub Tab** ([LibraryHubScreen.kt](file:///d:/Fit-Flow/app/src/main/java/com/fitflow/app/ui/library/LibraryHubScreen.kt), [Screen.kt](file:///d:/Fit-Flow/app/src/main/java/com/fitflow/app/ui/navigation/Screen.kt), [FitFlowNavGraph.kt](file:///d:/Fit-Flow/app/src/main/java/com/fitflow/app/ui/navigation/FitFlowNavGraph.kt)):
+  - Merged **Templates** and **Exercise Library** into a unified **Library** bottom navigation tab.
+  - Added a dashboard landing hub displaying total template and exercise counts alongside dedicated navigation cards for **Workout Templates** and **Exercise Catalog**.
+  - Tapping either card navigates into the full-featured, dedicated screen with back navigation to return to the Hub.
+  - Streamlined the bottom navigation bar to 5 core items: **Today**, **Food**, **Library**, **Schedule**, and **History**.
 - **Food & Nutrition Logging Tab** ([FoodScreen.kt](file:///d:/Fit-Flow/app/src/main/java/com/fitflow/app/ui/food/FoodScreen.kt), [FoodViewModel.kt](file:///d:/Fit-Flow/app/src/main/java/com/fitflow/app/ui/food/FoodViewModel.kt), [AddEditFoodDialog.kt](file:///d:/Fit-Flow/app/src/main/java/com/fitflow/app/ui/food/AddEditFoodDialog.kt)):
   - Added a dedicated bottom navigation tab for logging daily food intake and calories for the present date only.
   - Interactive **Log Food** dialog with input for food name, quantity, unit selection (Grams `g`, Milligrams `mg`, Kilograms `kg`, Litres `l`, Millilitres `ml`, `unit`, `candy`, `piece`, `serving`, `cup`, `tbsp`, `tsp`, or custom unit text), calories (kcal), and time of day / meal categorization (Breakfast, Lunch, Dinner, Snack, Pre-Workout, Post-Workout).
