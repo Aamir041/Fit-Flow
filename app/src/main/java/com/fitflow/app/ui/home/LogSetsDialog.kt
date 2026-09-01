@@ -49,9 +49,6 @@ import com.fitflow.app.ui.components.CategoryBadge
 import com.fitflow.app.ui.components.DecimalStepper
 import com.fitflow.app.ui.components.NumberStepper
 import com.fitflow.app.ui.components.SprintBadge
-import com.fitflow.app.ui.theme.CyanAccent
-import com.fitflow.app.ui.theme.EmeraldLight
-import com.fitflow.app.ui.theme.EmeraldPrimary
 
 @Composable
 fun LogSetsDialog(
@@ -103,7 +100,7 @@ fun LogSetsDialog(
                                 Row(
                                     modifier = Modifier
                                         .clip(RoundedCornerShape(6.dp))
-                                        .background(CyanAccent.copy(alpha = 0.12f))
+                                        .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.12f))
                                         .clickable { onOpenTimer() }
                                         .padding(horizontal = 6.dp, vertical = 3.dp),
                                     verticalAlignment = Alignment.CenterVertically
@@ -111,14 +108,14 @@ fun LogSetsDialog(
                                     Icon(
                                         imageVector = Icons.Default.Timer,
                                         contentDescription = "Rest timer",
-                                        tint = CyanAccent,
+                                        tint = MaterialTheme.colorScheme.primary,
                                         modifier = Modifier.size(12.dp)
                                     )
                                     Spacer(modifier = Modifier.width(3.dp))
                                     Text(
                                         text = "${item.restTimeSeconds}s",
                                         style = MaterialTheme.typography.labelSmall,
-                                        color = CyanAccent
+                                        color = MaterialTheme.colorScheme.primary
                                     )
                                 }
                             }
@@ -267,14 +264,14 @@ fun LogSetsDialog(
                         .height(40.dp),
                     shape = RoundedCornerShape(12.dp),
                     colors = ButtonDefaults.outlinedButtonColors(
-                        contentColor = EmeraldPrimary
+                        contentColor = MaterialTheme.colorScheme.primary
                     )
                 ) {
                     Icon(
                         imageVector = Icons.Default.Add,
                         contentDescription = null,
                         modifier = Modifier.size(16.dp),
-                        tint = EmeraldPrimary
+                        tint = MaterialTheme.colorScheme.primary
                     )
                     Spacer(modifier = Modifier.width(6.dp))
                     Text(
@@ -294,8 +291,8 @@ fun LogSetsDialog(
                         .height(48.dp),
                     shape = RoundedCornerShape(14.dp),
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = EmeraldPrimary,
-                        contentColor = MaterialTheme.colorScheme.background
+                        containerColor = MaterialTheme.colorScheme.primary,
+                        contentColor = MaterialTheme.colorScheme.onPrimary
                     )
                 ) {
                     Text(
@@ -320,12 +317,12 @@ fun SetRowItem(
 ) {
     val isDone = setModel.isCompleted
     val rowBg = if (isDone) {
-        EmeraldPrimary.copy(alpha = 0.12f)
+        MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
     } else {
         MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
     }
     val rowBorder = if (isDone) {
-        EmeraldPrimary.copy(alpha = 0.5f)
+        MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)
     } else {
         MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)
     }
@@ -346,7 +343,7 @@ fun SetRowItem(
                 .height(32.dp)
                 .clip(RoundedCornerShape(8.dp))
                 .background(
-                    if (isDone) EmeraldPrimary.copy(alpha = 0.2f)
+                    if (isDone) MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)
                     else MaterialTheme.colorScheme.surfaceVariant
                 ),
             contentAlignment = Alignment.Center
@@ -355,7 +352,7 @@ fun SetRowItem(
                 text = "${setModel.setNumber}",
                 style = MaterialTheme.typography.titleSmall,
                 fontWeight = FontWeight.Bold,
-                color = if (isDone) EmeraldPrimary else MaterialTheme.colorScheme.onSurface
+                color = if (isDone) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
             )
         }
 
@@ -453,7 +450,7 @@ fun SetRowItem(
                     text = "$weightFormatted kg",
                     style = MaterialTheme.typography.bodyMedium,
                     fontWeight = FontWeight.Bold,
-                    color = CyanAccent,
+                    color = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.width(52.dp),
                     textAlign = TextAlign.Center,
                     fontSize = 12.sp
@@ -490,11 +487,11 @@ fun SetRowItem(
                     .size(30.dp)
                     .clip(CircleShape)
                     .background(
-                        if (isDone) EmeraldPrimary else MaterialTheme.colorScheme.surface
+                        if (isDone) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surface
                     )
                     .border(
                         1.dp,
-                        if (isDone) EmeraldPrimary else MaterialTheme.colorScheme.outlineVariant,
+                        if (isDone) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant,
                         CircleShape
                     )
                     .clickable { onToggleDone() },
@@ -504,7 +501,7 @@ fun SetRowItem(
                     Icon(
                         imageVector = Icons.Default.Check,
                         contentDescription = "Completed Set",
-                        tint = MaterialTheme.colorScheme.background,
+                        tint = MaterialTheme.colorScheme.onPrimary,
                         modifier = Modifier.size(18.dp)
                     )
                 }
@@ -539,12 +536,12 @@ fun SprintRoundRowItem(
 ) {
     val isDone = setModel.isCompleted
     val rowBg = if (isDone) {
-        EmeraldPrimary.copy(alpha = 0.12f)
+        MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
     } else {
         MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
     }
     val rowBorder = if (isDone) {
-        EmeraldPrimary.copy(alpha = 0.5f)
+        MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)
     } else {
         MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)
     }
@@ -570,7 +567,7 @@ fun SprintRoundRowItem(
                 text = "R${setModel.setNumber}",
                 style = MaterialTheme.typography.titleSmall,
                 fontWeight = FontWeight.Bold,
-                color = if (isDone) EmeraldPrimary else MaterialTheme.colorScheme.onSurface
+                color = if (isDone) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
             )
         }
 
@@ -604,7 +601,7 @@ fun SprintRoundRowItem(
                 text = "${currentDuration}s",
                 style = MaterialTheme.typography.titleSmall,
                 fontWeight = FontWeight.Bold,
-                color = if (isDone) EmeraldPrimary else CyanAccent,
+                color = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.width(50.dp),
                 textAlign = TextAlign.Center
             )
@@ -640,11 +637,11 @@ fun SprintRoundRowItem(
                     .size(30.dp)
                     .clip(CircleShape)
                     .background(
-                        if (isDone) EmeraldPrimary else MaterialTheme.colorScheme.surface
+                        if (isDone) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surface
                     )
                     .border(
                         1.dp,
-                        if (isDone) EmeraldPrimary else MaterialTheme.colorScheme.outlineVariant,
+                        if (isDone) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant,
                         CircleShape
                     )
                     .clickable { onToggleDone() },
@@ -654,7 +651,7 @@ fun SprintRoundRowItem(
                     Icon(
                         imageVector = Icons.Default.Check,
                         contentDescription = "Completed Round",
-                        tint = MaterialTheme.colorScheme.background,
+                        tint = MaterialTheme.colorScheme.onPrimary,
                         modifier = Modifier.size(18.dp)
                     )
                 }

@@ -1,5 +1,10 @@
 package com.fitflow.app.ui.templates
 
+import android.content.Context
+import android.net.Uri
+import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -22,27 +27,47 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Input
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.DeleteOutline
 import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.FitnessCenter
+import androidx.compose.material.icons.filled.FileDownload
+import androidx.compose.material.icons.filled.FileUpload
 import androidx.compose.material.icons.filled.Layers
+import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -56,42 +81,8 @@ import com.fitflow.app.ui.components.CategoryBadge
 import com.fitflow.app.ui.components.ConfirmDeleteDialog
 import com.fitflow.app.ui.components.EmptyStateCard
 import com.fitflow.app.ui.components.FitFlowTopBar
-import com.fitflow.app.ui.theme.CrimsonAlert
-import com.fitflow.app.ui.theme.EmeraldPrimary
 import com.fitflow.app.ui.theme.FitFlowTheme
-
-import android.content.Context
-import android.content.Intent
-import android.net.Uri
-import android.widget.Toast
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.material.icons.automirrored.filled.Input
-import androidx.compose.material.icons.filled.FileDownload
-import androidx.compose.material.icons.filled.FileUpload
-import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material.icons.filled.Share
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
-import androidx.compose.material3.SnackbarHost
-import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.TextButton
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
-import androidx.compose.ui.platform.LocalClipboardManager
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.AnnotatedString
 import kotlinx.coroutines.flow.collectLatest
-import kotlinx.coroutines.launch
 
 @Composable
 fun TemplatesScreen(
@@ -118,16 +109,16 @@ fun TemplatesScreen(
                 if (!jsonString.isNullOrBlank()) {
                     viewModel.importTemplateFromJson(jsonString)
                 } else {
-                    Toast.makeText(context, "Selected file is empty", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(context, "Selected file was empty", Toast.LENGTH_SHORT).show()
                 }
             } catch (e: Exception) {
-                Toast.makeText(context, "Failed to read file: ${e.localizedMessage}", Toast.LENGTH_SHORT).show()
+                Toast.makeText(context, "Failed to read file: ${e.localizedMessage}", Toast.LENGTH_LONG).show()
             }
         }
     }
 
-    // Launcher for saving all templates JSON file directly to device storage
-    val saveFileLauncher = rememberLauncherForActivityResult(
+    // Launcher for exporting all templates JSON to device storage file
+    val exportAllFileLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.CreateDocument("application/json")
     ) { uri: Uri? ->
         if (uri != null && pendingExportJson != null) {
@@ -135,31 +126,34 @@ fun TemplatesScreen(
                 context.contentResolver.openOutputStream(uri)?.use { stream ->
                     stream.bufferedWriter().use { it.write(pendingExportJson!!) }
                 }
-                Toast.makeText(context, "Templates saved successfully!", Toast.LENGTH_LONG).show()
+                Toast.makeText(context, "Templates exported successfully!", Toast.LENGTH_SHORT).show()
             } catch (e: Exception) {
-                Toast.makeText(context, "Failed to save file: ${e.localizedMessage}", Toast.LENGTH_SHORT).show()
+                Toast.makeText(context, "Failed to save file: ${e.localizedMessage}", Toast.LENGTH_LONG).show()
             } finally {
                 pendingExportJson = null
             }
         }
     }
 
-    // Handle export event (trigger system Save-As file picker + share intent option)
-    LaunchedEffect(Unit) {
-        viewModel.exportShareEvent.collectLatest { event ->
-            pendingExportJson = event.jsonContent
-            saveFileLauncher.launch("${event.templateName}.json")
-        }
-    }
-
-    LaunchedEffect(uiState.infoMessage, uiState.errorMessage) {
+    LaunchedEffect(uiState.infoMessage) {
         uiState.infoMessage?.let {
             snackbarHostState.showSnackbar(it)
             viewModel.clearMessages()
         }
+    }
+
+    LaunchedEffect(uiState.errorMessage) {
         uiState.errorMessage?.let {
             snackbarHostState.showSnackbar(it)
             viewModel.clearMessages()
+        }
+    }
+
+    LaunchedEffect(Unit) {
+        viewModel.exportShareEvent.collectLatest { event ->
+            pendingExportJson = event.jsonContent
+            val timestamp = System.currentTimeMillis()
+            exportAllFileLauncher.launch("${event.templateName}_$timestamp.json")
         }
     }
 
@@ -172,8 +166,12 @@ fun TemplatesScreen(
         onConfirmDelete = { viewModel.confirmDelete() },
         onDismissDelete = { viewModel.dismissDeletePrompt() },
         onExportAllTemplates = { viewModel.exportAllTemplates() },
-        onImportFromFile = { importFileLauncher.launch("application/json") },
-        onImportDirectJson = { jsonStr -> viewModel.importTemplateFromJson(jsonStr) },
+        onImportFromFile = {
+            importFileLauncher.launch("application/json")
+        },
+        onImportDirectJson = { json ->
+            viewModel.importTemplateFromJson(json)
+        },
         onNavigateBack = onNavigateBack,
         modifier = modifier
     )
@@ -194,17 +192,17 @@ fun TemplatesScreenContent(
     onNavigateBack: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
+    var topMenuExpanded by remember { mutableStateOf(false) }
     var isImportDialogOpen by remember { mutableStateOf(false) }
     var directJsonInput by remember { mutableStateOf("") }
     val clipboardManager = LocalClipboardManager.current
-    var topMenuExpanded by remember { mutableStateOf(false) }
 
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             FitFlowTopBar(
                 title = "Workout Templates",
-                subtitle = "${uiState.templates.size} saved templates",
+                subtitle = "${uiState.templates.size} custom routines available",
                 onBackClick = onNavigateBack,
                 actions = {
                     Box {
@@ -222,7 +220,7 @@ fun TemplatesScreenContent(
                             DropdownMenuItem(
                                 text = { Text("Export All Templates (JSON)") },
                                 leadingIcon = {
-                                    Icon(Icons.Default.FileDownload, contentDescription = null, modifier = Modifier.size(18.dp), tint = EmeraldPrimary)
+                                    Icon(Icons.Default.FileDownload, contentDescription = null, modifier = Modifier.size(18.dp), tint = MaterialTheme.colorScheme.primary)
                                 },
                                 onClick = {
                                     topMenuExpanded = false
@@ -258,8 +256,8 @@ fun TemplatesScreenContent(
         floatingActionButton = {
             FloatingActionButton(
                 onClick = onCreateTemplate,
-                containerColor = EmeraldPrimary,
-                contentColor = MaterialTheme.colorScheme.background,
+                containerColor = MaterialTheme.colorScheme.primary,
+                contentColor = MaterialTheme.colorScheme.onPrimary,
                 shape = CircleShape
             ) {
                 Icon(imageVector = Icons.Default.Add, contentDescription = "Create Template")
@@ -275,7 +273,7 @@ fun TemplatesScreenContent(
                     .padding(innerPadding),
                 contentAlignment = Alignment.Center
             ) {
-                CircularProgressIndicator(color = EmeraldPrimary)
+                CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
             }
         } else if (uiState.templates.isEmpty()) {
             Column(
@@ -302,7 +300,7 @@ fun TemplatesScreenContent(
                         imageVector = Icons.Default.FileUpload,
                         contentDescription = null,
                         modifier = Modifier.size(16.dp),
-                        tint = EmeraldPrimary
+                        tint = MaterialTheme.colorScheme.primary
                     )
                     Spacer(modifier = Modifier.width(6.dp))
                     Text("Import Template from JSON")
@@ -371,7 +369,7 @@ fun TemplatesScreenContent(
                             placeholder = { Text("{\n  \"templates\": [\n    {\n      \"templateName\": \"...\",\n      \"exercises\": [...]\n    }\n  ]\n}") },
                             shape = RoundedCornerShape(12.dp),
                             colors = OutlinedTextFieldDefaults.colors(
-                                focusedBorderColor = EmeraldPrimary,
+                                focusedBorderColor = MaterialTheme.colorScheme.primary,
                                 unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant
                             )
                         )
@@ -386,7 +384,10 @@ fun TemplatesScreenContent(
                                 onImportDirectJson(trimmed)
                             }
                         },
-                        colors = ButtonDefaults.buttonColors(containerColor = EmeraldPrimary)
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.primary,
+                            contentColor = MaterialTheme.colorScheme.onPrimary
+                        )
                     ) {
                         Text("Import")
                     }
@@ -441,7 +442,7 @@ fun TemplateItemCard(
                     Text(
                         text = "${exercises.size} exercises",
                         style = MaterialTheme.typography.bodySmall,
-                        color = EmeraldPrimary,
+                        color = MaterialTheme.colorScheme.primary,
                         fontWeight = FontWeight.SemiBold
                     )
                 }
@@ -459,7 +460,7 @@ fun TemplateItemCard(
                         Icon(
                             imageVector = Icons.Default.DeleteOutline,
                             contentDescription = "Delete template",
-                            tint = CrimsonAlert,
+                            tint = MaterialTheme.colorScheme.error,
                             modifier = Modifier.size(20.dp)
                         )
                     }
@@ -547,7 +548,7 @@ fun TemplatesScreenPreview() {
                 templates = listOf(sampleTemplate),
                 isLoading = false
             ),
-            snackbarHostState = SnackbarHostState(),
+            snackbarHostState = remember { SnackbarHostState() },
             onCreateTemplate = {},
             onEditTemplate = {},
             onDeleteTemplate = {},

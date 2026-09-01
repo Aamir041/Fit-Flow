@@ -52,7 +52,6 @@ import com.fitflow.app.ui.components.CategoryBadge
 import com.fitflow.app.ui.components.CategoryFilterChip
 import com.fitflow.app.ui.components.SprintBadge
 import com.fitflow.app.ui.exercises.AddEditExerciseDialog
-import com.fitflow.app.ui.theme.EmeraldPrimary
 
 val CategoryOptions = listOf("All", "Chest", "Back", "Legs", "Shoulders", "Arms", "Core", "Cardio")
 
@@ -60,25 +59,18 @@ val CategoryOptions = listOf("All", "Chest", "Back", "Legs", "Shoulders", "Arms"
 @Composable
 fun ExercisePickerBottomSheet(
     availableExercises: List<ExerciseEntity>,
-    alreadySelectedExerciseIds: Set<Long>,
-    selectedCategory: String,
     searchQuery: String,
-    onCategorySelected: (String) -> Unit,
+    selectedCategory: String,
+    dynamicCategories: List<String> = CategoryOptions,
+    alreadySelectedExerciseIds: Set<Long> = emptySet(),
     onSearchQueryChanged: (String) -> Unit,
+    onCategorySelected: (String) -> Unit,
     onExerciseSelected: (ExerciseEntity) -> Unit,
     onCreateCustomExercise: (name: String, category: String, sets: Int, reps: Int, isSprint: Boolean, durationSeconds: Int) -> Unit,
     onDismiss: () -> Unit,
     sheetState: SheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 ) {
     var isCreatingCustom by remember { mutableStateOf(false) }
-
-    // Compute dynamic category options from the exercises available
-    val dynamicCategories = remember(availableExercises) {
-        val cats = availableExercises.map { it.category }.distinct()
-        val base = CategoryOptions.toMutableList()
-        cats.forEach { c -> if (!base.contains(c)) base.add(c) }
-        base
-    }
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
@@ -101,7 +93,7 @@ fun ExercisePickerBottomSheet(
                 .fillMaxHeight(0.85f)
                 .padding(horizontal = 16.dp)
         ) {
-            // Header: Title + Create New Exercise Button + Close Button
+            // Header Row: Title + New Exercise Action + Close
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -109,13 +101,13 @@ fun ExercisePickerBottomSheet(
             ) {
                 Column {
                     Text(
-                        text = "Add Exercise",
+                        text = "Add Movements",
                         style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSurface
                     )
                     Text(
-                        text = "Pick existing or create a custom one",
+                        text = "Select movements to build this workout routine",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -127,13 +119,13 @@ fun ExercisePickerBottomSheet(
                         shape = RoundedCornerShape(10.dp),
                         contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp),
                         colors = ButtonDefaults.outlinedButtonColors(
-                            contentColor = EmeraldPrimary
+                            contentColor = MaterialTheme.colorScheme.primary
                         )
                     ) {
                         Icon(
                             imageVector = Icons.Default.Add,
                             contentDescription = null,
-                            tint = EmeraldPrimary,
+                            tint = MaterialTheme.colorScheme.primary,
                             modifier = Modifier.size(16.dp)
                         )
                         Spacer(modifier = Modifier.width(4.dp))
@@ -185,7 +177,7 @@ fun ExercisePickerBottomSheet(
                 singleLine = true,
                 shape = RoundedCornerShape(14.dp),
                 colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = EmeraldPrimary,
+                    focusedBorderColor = MaterialTheme.colorScheme.primary,
                     unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant,
                     focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
                     unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant
@@ -230,8 +222,8 @@ fun ExercisePickerBottomSheet(
                         Button(
                             onClick = { isCreatingCustom = true },
                             colors = ButtonDefaults.buttonColors(
-                                containerColor = EmeraldPrimary,
-                                contentColor = MaterialTheme.colorScheme.background
+                                containerColor = MaterialTheme.colorScheme.primary,
+                                contentColor = MaterialTheme.colorScheme.onPrimary
                             ),
                             shape = RoundedCornerShape(10.dp)
                         ) {
@@ -302,7 +294,7 @@ fun ExercisePickerBottomSheet(
                                 Text(
                                     text = "Added",
                                     style = MaterialTheme.typography.labelSmall,
-                                    color = EmeraldPrimary,
+                                    color = MaterialTheme.colorScheme.primary,
                                     fontWeight = FontWeight.Bold,
                                     modifier = Modifier.padding(end = 8.dp)
                                 )
@@ -311,13 +303,13 @@ fun ExercisePickerBottomSheet(
                                     modifier = Modifier
                                         .size(32.dp)
                                         .clip(CircleShape)
-                                        .background(EmeraldPrimary.copy(alpha = 0.15f)),
+                                        .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)),
                                     contentAlignment = Alignment.Center
                                 ) {
                                     Icon(
                                         imageVector = Icons.Default.Add,
                                         contentDescription = "Add",
-                                        tint = EmeraldPrimary,
+                                        tint = MaterialTheme.colorScheme.primary,
                                         modifier = Modifier.size(18.dp)
                                     )
                                 }

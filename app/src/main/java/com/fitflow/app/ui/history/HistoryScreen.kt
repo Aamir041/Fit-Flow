@@ -4,6 +4,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -18,9 +19,13 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ChevronLeft
+import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.DeleteSweep
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.FitnessCenter
@@ -52,19 +57,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.animation.animateColorAsState
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.filled.ChevronLeft
-import androidx.compose.material.icons.filled.ChevronRight
-import androidx.compose.ui.text.style.TextAlign
 import com.fitflow.app.data.local.entity.ExerciseEntity
 import com.fitflow.app.data.local.entity.FoodLogEntity
 import com.fitflow.app.data.local.entity.WorkoutLogEntity
@@ -73,15 +71,10 @@ import com.fitflow.app.ui.components.CategoryBadge
 import com.fitflow.app.ui.components.EmptyStateCard
 import com.fitflow.app.ui.components.FitFlowTopBar
 import com.fitflow.app.ui.components.SprintBadge
-import com.fitflow.app.ui.theme.CyanAccent
-import com.fitflow.app.ui.theme.EmeraldDark
-import com.fitflow.app.ui.theme.EmeraldLight
-import com.fitflow.app.ui.theme.EmeraldPrimary
 import com.fitflow.app.ui.theme.FitFlowTheme
 import java.time.LocalDate
 import java.time.YearMonth
 import java.time.format.DateTimeFormatter
-import java.time.format.DateTimeParseException
 
 @Composable
 fun HistoryScreen(
@@ -221,7 +214,7 @@ fun HistoryScreenContent(
                     .padding(innerPadding),
                 contentAlignment = Alignment.Center
             ) {
-                CircularProgressIndicator(color = EmeraldPrimary)
+                CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
             }
         } else {
             LazyColumn(
@@ -305,7 +298,7 @@ fun MonthContributionHeatmap(
                     Text(
                         text = "CONSISTENCY HEATMAP",
                         style = MaterialTheme.typography.labelSmall,
-                        color = EmeraldPrimary,
+                        color = MaterialTheme.colorScheme.primary,
                         letterSpacing = 1.sp,
                         fontWeight = FontWeight.Bold
                     )
@@ -380,20 +373,20 @@ fun MonthContributionHeatmap(
                                 val isToday = isCurrentMonth && dayNumber == today.dayOfMonth
 
                                 val squareBgColor = when {
-                                    workoutCount >= 4 -> EmeraldPrimary
-                                    workoutCount in 2..3 -> EmeraldLight
-                                    workoutCount == 1 -> EmeraldLight.copy(alpha = 0.65f)
+                                    workoutCount >= 4 -> MaterialTheme.colorScheme.primary
+                                    workoutCount in 2..3 -> MaterialTheme.colorScheme.primary.copy(alpha = 0.75f)
+                                    workoutCount == 1 -> MaterialTheme.colorScheme.primary.copy(alpha = 0.45f)
                                     else -> MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f)
                                 }
 
                                 val squareBorderColor = when {
-                                    isToday -> CyanAccent
-                                    isLit -> EmeraldPrimary.copy(alpha = 0.8f)
+                                    isToday -> MaterialTheme.colorScheme.primary
+                                    isLit -> MaterialTheme.colorScheme.primary.copy(alpha = 0.8f)
                                     else -> MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)
                                 }
 
                                 val textColor = when {
-                                    workoutCount >= 2 -> MaterialTheme.colorScheme.background
+                                    workoutCount >= 2 -> MaterialTheme.colorScheme.onPrimary
                                     isLit -> MaterialTheme.colorScheme.onSurface
                                     else -> MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
                                 }
@@ -458,21 +451,21 @@ fun MonthContributionHeatmap(
                     modifier = Modifier
                         .size(10.dp)
                         .clip(RoundedCornerShape(2.dp))
-                        .background(EmeraldLight.copy(alpha = 0.65f))
+                        .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.45f))
                 )
                 Spacer(modifier = Modifier.width(3.dp))
                 Box(
                     modifier = Modifier
                         .size(10.dp)
                         .clip(RoundedCornerShape(2.dp))
-                        .background(EmeraldLight)
+                        .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.75f))
                 )
                 Spacer(modifier = Modifier.width(3.dp))
                 Box(
                     modifier = Modifier
                         .size(10.dp)
                         .clip(RoundedCornerShape(2.dp))
-                        .background(EmeraldPrimary)
+                        .background(MaterialTheme.colorScheme.primary)
                 )
                 Spacer(modifier = Modifier.width(4.dp))
                 Text(
@@ -524,7 +517,7 @@ fun DayWorkoutDetailsDialog(
                         else -> "$totalFoods food items • $totalCalories kcal"
                     },
                     style = MaterialTheme.typography.labelSmall,
-                    color = if (isEmpty) MaterialTheme.colorScheme.onSurfaceVariant else EmeraldPrimary,
+                    color = if (isEmpty) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.primary,
                     fontWeight = FontWeight.SemiBold
                 )
             }
@@ -562,7 +555,7 @@ fun DayWorkoutDetailsDialog(
                                 text = "WORKOUTS (${logs.size})",
                                 style = MaterialTheme.typography.labelSmall,
                                 fontWeight = FontWeight.Bold,
-                                color = EmeraldPrimary,
+                                color = MaterialTheme.colorScheme.primary,
                                 letterSpacing = 1.sp
                             )
                         }
@@ -581,115 +574,116 @@ fun DayWorkoutDetailsDialog(
                                     "${item.log.actualWeight}"
                                 }
 
-                                Column(
+                                Card(
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .clip(RoundedCornerShape(12.dp))
-                                        .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
-                                        .border(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f), RoundedCornerShape(12.dp))
-                                        .padding(12.dp)
+                                        .clip(RoundedCornerShape(12.dp)),
+                                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
                                 ) {
-                                    Row(
-                                        modifier = Modifier.fillMaxWidth(),
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.SpaceBetween
-                                    ) {
-                                        Column(modifier = Modifier.weight(1f)) {
-                                            Text(
-                                                text = item.exercise.name,
-                                                style = MaterialTheme.typography.bodyMedium,
-                                                fontWeight = FontWeight.Bold,
-                                                color = MaterialTheme.colorScheme.onSurface
-                                            )
-                                            Spacer(modifier = Modifier.height(4.dp))
-                                            Row(
-                                                verticalAlignment = Alignment.CenterVertically,
-                                                horizontalArrangement = Arrangement.spacedBy(6.dp)
-                                            ) {
-                                                CategoryBadge(category = item.exercise.category)
-                                                if (item.exercise.isSprint) {
-                                                    SprintBadge(durationSeconds = item.log.actualDurationSeconds)
-                                                }
-                                            }
-                                        }
-
-                                        Column(horizontalAlignment = Alignment.End) {
-                                            if (item.exercise.isSprint) {
+                                    Column(modifier = Modifier.padding(12.dp)) {
+                                        Row(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.SpaceBetween
+                                        ) {
+                                            Column(modifier = Modifier.weight(1f)) {
                                                 Text(
-                                                    text = "${item.log.actualDurationSeconds}s sprint",
-                                                    style = MaterialTheme.typography.bodySmall,
+                                                    text = item.exercise.name,
+                                                    style = MaterialTheme.typography.titleSmall,
                                                     fontWeight = FontWeight.Bold,
                                                     color = MaterialTheme.colorScheme.onSurface
                                                 )
-                                            } else {
-                                                Text(
-                                                    text = "${item.log.actualSets} sets total",
-                                                    style = MaterialTheme.typography.bodySmall,
-                                                    fontWeight = FontWeight.Bold,
-                                                    color = MaterialTheme.colorScheme.onSurface
-                                                )
-                                                if (item.log.actualWeight > 0 && setsList.isEmpty()) {
-                                                    Text(
-                                                        text = "$weightFormatted kg",
-                                                        style = MaterialTheme.typography.labelSmall,
-                                                        color = CyanAccent
-                                                    )
-                                                }
-                                            }
-                                        }
-                                    }
-
-                                    // Display detailed sets or sprint rounds if available
-                                    if (setsList.isNotEmpty()) {
-                                        Spacer(modifier = Modifier.height(8.dp))
-                                        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
-                                        Spacer(modifier = Modifier.height(6.dp))
-
-                                        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                                            setsList.forEach { s ->
-                                                val isSprintItem = item.exercise.isSprint
-                                                val setWeightFormatted = if (s.weight % 1.0 == 0.0) {
-                                                    "${s.weight.toInt()}"
-                                                } else {
-                                                    "${s.weight}"
-                                                }
+                                                Spacer(modifier = Modifier.height(2.dp))
                                                 Row(
-                                                    modifier = Modifier.fillMaxWidth(),
                                                     verticalAlignment = Alignment.CenterVertically,
-                                                    horizontalArrangement = Arrangement.SpaceBetween
+                                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
                                                 ) {
-                                                    Row(verticalAlignment = Alignment.CenterVertically) {
-                                                        val prefix = if (isSprintItem) "Round" else "Set"
+                                                    CategoryBadge(category = item.exercise.category)
+                                                    if (item.exercise.isSprint) {
+                                                        SprintBadge(durationSeconds = item.exercise.defaultDurationSeconds)
+                                                    }
+                                                }
+                                            }
+
+                                            Column(horizontalAlignment = Alignment.End) {
+                                                if (item.exercise.isSprint) {
+                                                    val completedRounds = if (setsList.isNotEmpty()) setsList.count { it.isCompleted } else item.log.actualSets
+                                                    Text(
+                                                        text = "$completedRounds rounds completed",
+                                                        style = MaterialTheme.typography.bodySmall,
+                                                        fontWeight = FontWeight.Bold,
+                                                        color = MaterialTheme.colorScheme.onSurface
+                                                    )
+                                                } else {
+                                                    Text(
+                                                        text = "${item.log.actualSets} sets total",
+                                                        style = MaterialTheme.typography.bodySmall,
+                                                        fontWeight = FontWeight.Bold,
+                                                        color = MaterialTheme.colorScheme.onSurface
+                                                    )
+                                                    if (item.log.actualWeight > 0 && setsList.isEmpty()) {
                                                         Text(
-                                                            text = "$prefix ${s.setNumber}:",
+                                                            text = "$weightFormatted kg",
                                                             style = MaterialTheme.typography.labelSmall,
-                                                            fontWeight = FontWeight.Bold,
-                                                            color = if (s.isCompleted) EmeraldLight else MaterialTheme.colorScheme.onSurfaceVariant
-                                                        )
-                                                        Spacer(modifier = Modifier.width(6.dp))
-                                                        Text(
-                                                            text = if (isSprintItem) "${s.reps}s sprint" else "${s.reps} reps",
-                                                            style = MaterialTheme.typography.bodySmall,
-                                                            color = MaterialTheme.colorScheme.onSurface
+                                                            color = MaterialTheme.colorScheme.primary
                                                         )
                                                     }
-                                                    Row(verticalAlignment = Alignment.CenterVertically) {
-                                                        if (!isSprintItem && s.weight > 0) {
+                                                }
+                                            }
+                                        }
+
+                                        // Display detailed sets or sprint rounds if available
+                                        if (setsList.isNotEmpty()) {
+                                            Spacer(modifier = Modifier.height(8.dp))
+                                            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
+                                            Spacer(modifier = Modifier.height(6.dp))
+
+                                            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                                setsList.forEach { s ->
+                                                    val isSprintItem = item.exercise.isSprint
+                                                    val setWeightFormatted = if (s.weight % 1.0 == 0.0) {
+                                                        "${s.weight.toInt()}"
+                                                    } else {
+                                                        "${s.weight}"
+                                                    }
+                                                    Row(
+                                                        modifier = Modifier.fillMaxWidth(),
+                                                        verticalAlignment = Alignment.CenterVertically,
+                                                        horizontalArrangement = Arrangement.SpaceBetween
+                                                    ) {
+                                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                                            val prefix = if (isSprintItem) "Round" else "Set"
                                                             Text(
-                                                                text = "$setWeightFormatted kg",
+                                                                text = "$prefix ${s.setNumber}:",
                                                                 style = MaterialTheme.typography.labelSmall,
-                                                                fontWeight = FontWeight.SemiBold,
-                                                                color = CyanAccent
+                                                                fontWeight = FontWeight.Bold,
+                                                                color = if (s.isCompleted) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
                                                             )
                                                             Spacer(modifier = Modifier.width(6.dp))
-                                                        }
-                                                        if (s.isCompleted) {
                                                             Text(
-                                                                text = "✓",
-                                                                style = MaterialTheme.typography.labelSmall,
-                                                                color = EmeraldPrimary,
-                                                                fontWeight = FontWeight.Bold
+                                                                text = if (isSprintItem) "${s.reps}s sprint" else "${s.reps} reps",
+                                                                style = MaterialTheme.typography.bodySmall,
+                                                                color = MaterialTheme.colorScheme.onSurface
                                                             )
+                                                        }
+                                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                                            if (!isSprintItem && s.weight > 0) {
+                                                                Text(
+                                                                    text = "$setWeightFormatted kg",
+                                                                    style = MaterialTheme.typography.labelSmall,
+                                                                    fontWeight = FontWeight.SemiBold,
+                                                                    color = MaterialTheme.colorScheme.primary
+                                                                )
+                                                                Spacer(modifier = Modifier.width(6.dp))
+                                                            }
+                                                            if (s.isCompleted) {
+                                                                Text(
+                                                                    text = "✓",
+                                                                    style = MaterialTheme.typography.labelSmall,
+                                                                    color = MaterialTheme.colorScheme.primary,
+                                                                    fontWeight = FontWeight.Bold
+                                                                )
+                                                            }
                                                         }
                                                     }
                                                 }
@@ -711,14 +705,14 @@ fun DayWorkoutDetailsDialog(
                                 text = "FOOD & NUTRITION (${foodLogs.size})",
                                 style = MaterialTheme.typography.labelSmall,
                                 fontWeight = FontWeight.Bold,
-                                color = CyanAccent,
+                                color = MaterialTheme.colorScheme.primary,
                                 letterSpacing = 1.sp
                             )
                             Text(
                                 text = "$totalCalories kcal",
                                 style = MaterialTheme.typography.labelSmall,
                                 fontWeight = FontWeight.ExtraBold,
-                                color = CyanAccent
+                                color = MaterialTheme.colorScheme.primary
                             )
                         }
 
@@ -759,7 +753,7 @@ fun DayWorkoutDetailsDialog(
                                         text = "${food.calories} kcal",
                                         style = MaterialTheme.typography.bodyMedium,
                                         fontWeight = FontWeight.ExtraBold,
-                                        color = CyanAccent
+                                        color = MaterialTheme.colorScheme.primary
                                     )
                                 }
                             }
@@ -770,14 +764,13 @@ fun DayWorkoutDetailsDialog(
         },
         confirmButton = {
             TextButton(onClick = onDismiss) {
-                Text("Close", color = EmeraldPrimary, fontWeight = FontWeight.Bold)
+                Text("Close", color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
             }
         },
         shape = RoundedCornerShape(20.dp),
         containerColor = MaterialTheme.colorScheme.surface
     )
 }
-
 
 @Preview(showBackground = true)
 @Composable

@@ -17,6 +17,9 @@ import androidx.compose.material.icons.outlined.ListAlt
 import androidx.compose.material.icons.outlined.Restaurant
 import androidx.compose.ui.graphics.vector.ImageVector
 
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.outlined.Settings
+
 sealed class Screen(
     val route: String,
     val title: String,
@@ -70,6 +73,13 @@ sealed class Screen(
         title = "History",
         selectedIcon = Icons.Filled.History,
         unselectedIcon = Icons.Outlined.History
+    )
+
+    data object Settings : Screen(
+        route = "settings",
+        title = "Settings",
+        selectedIcon = Icons.Filled.Settings,
+        unselectedIcon = Icons.Outlined.Settings
     )
 
     data object TemplateEdit : Screen(

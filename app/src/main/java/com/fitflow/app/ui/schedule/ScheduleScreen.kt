@@ -17,7 +17,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Bedtime
@@ -42,8 +41,6 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.fitflow.app.ui.components.FitFlowTopBar
-import com.fitflow.app.ui.theme.CyanAccent
-import com.fitflow.app.ui.theme.EmeraldPrimary
 import com.fitflow.app.ui.theme.FitFlowTheme
 import java.time.DayOfWeek
 
@@ -91,7 +88,7 @@ fun ScheduleScreenContent(
                     .padding(innerPadding),
                 contentAlignment = Alignment.Center
             ) {
-                CircularProgressIndicator(color = EmeraldPrimary)
+                CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
             }
         } else {
             LazyColumn(
@@ -137,7 +134,7 @@ fun DayScheduleCard(
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val borderColor = if (day.isToday) EmeraldPrimary else MaterialTheme.colorScheme.outlineVariant
+    val borderColor = if (day.isToday) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant
     val cardBg = if (day.isToday) MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.8f) else MaterialTheme.colorScheme.surface
 
     Card(
@@ -172,9 +169,9 @@ fun DayScheduleCard(
                         .size(44.dp)
                         .clip(RoundedCornerShape(12.dp))
                         .background(
-                            if (day.isToday) EmeraldPrimary.copy(alpha = 0.18f)
+                            if (day.isToday) MaterialTheme.colorScheme.primary.copy(alpha = 0.18f)
                             else if (day.templateName != null) MaterialTheme.colorScheme.surfaceVariant
-                            else CyanAccent.copy(alpha = 0.1f)
+                            else MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)
                         ),
                     contentAlignment = Alignment.Center
                 ) {
@@ -182,14 +179,14 @@ fun DayScheduleCard(
                         Icon(
                             imageVector = Icons.Default.FitnessCenter,
                             contentDescription = null,
-                            tint = if (day.isToday) EmeraldPrimary else MaterialTheme.colorScheme.onSurface,
+                            tint = if (day.isToday) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
                             modifier = Modifier.size(22.dp)
                         )
                     } else {
                         Icon(
                             imageVector = Icons.Default.Bedtime,
                             contentDescription = null,
-                            tint = CyanAccent,
+                            tint = MaterialTheme.colorScheme.primary,
                             modifier = Modifier.size(20.dp)
                         )
                     }
@@ -210,13 +207,13 @@ fun DayScheduleCard(
                             Box(
                                 modifier = Modifier
                                     .clip(RoundedCornerShape(6.dp))
-                                    .background(EmeraldPrimary)
+                                    .background(MaterialTheme.colorScheme.primary)
                                     .padding(horizontal = 6.dp, vertical = 2.dp)
                             ) {
                                 Text(
                                     text = "TODAY",
                                     style = MaterialTheme.typography.labelSmall,
-                                    color = MaterialTheme.colorScheme.background,
+                                    color = MaterialTheme.colorScheme.onPrimary,
                                     fontWeight = FontWeight.Bold,
                                     fontSize = 9.sp
                                 )
@@ -230,7 +227,7 @@ fun DayScheduleCard(
                         Text(
                             text = "${day.templateName} • ${day.exerciseCount} exercises",
                             style = MaterialTheme.typography.bodyMedium,
-                            color = if (day.isToday) EmeraldPrimary else MaterialTheme.colorScheme.onSurfaceVariant
+                            color = if (day.isToday) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     } else {
                         Text(
@@ -242,10 +239,12 @@ fun DayScheduleCard(
                 }
             }
 
+            // Right Arrow
             Icon(
                 imageVector = Icons.Default.ChevronRight,
-                contentDescription = "Edit Day Assignment",
-                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                contentDescription = "Edit schedule",
+                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                modifier = Modifier.size(20.dp)
             )
         }
     }
@@ -256,18 +255,43 @@ fun DayScheduleCard(
 fun ScheduleScreenPreview() {
     FitFlowTheme {
         val sampleDays = listOf(
-            DayScheduleItem(1, DayOfWeek.MONDAY, "Monday", "MON", false, 1, "Push Day", 5),
-            DayScheduleItem(2, DayOfWeek.TUESDAY, "Tuesday", "TUE", false, 2, "Pull Day", 5),
-            DayScheduleItem(3, DayOfWeek.WEDNESDAY, "Wednesday", "WED", false, null, null, 0),
-            DayScheduleItem(4, DayOfWeek.THURSDAY, "Thursday", "THU", false, 3, "Leg Day", 5),
-            DayScheduleItem(5, DayOfWeek.FRIDAY, "Friday", "FRI", false, 1, "Push Day", 5),
-            DayScheduleItem(6, DayOfWeek.SATURDAY, "Saturday", "SAT", true, 2, "Pull Day", 5),
-            DayScheduleItem(7, DayOfWeek.SUNDAY, "Sunday", "SUN", false, null, null, 0)
+            DayScheduleItem(
+                dayOfWeek = DayOfWeek.MONDAY.value,
+                dayOfWeekEnum = DayOfWeek.MONDAY,
+                dayName = "Monday",
+                shortDayName = "Mon",
+                isToday = false,
+                templateId = 1L,
+                templateName = "Push Day (Chest/Triceps)",
+                exerciseCount = 4
+            ),
+            DayScheduleItem(
+                dayOfWeek = DayOfWeek.TUESDAY.value,
+                dayOfWeekEnum = DayOfWeek.TUESDAY,
+                dayName = "Tuesday",
+                shortDayName = "Tue",
+                isToday = true,
+                templateId = 2L,
+                templateName = "Pull Day (Back/Biceps)",
+                exerciseCount = 5
+            ),
+            DayScheduleItem(
+                dayOfWeek = DayOfWeek.WEDNESDAY.value,
+                dayOfWeekEnum = DayOfWeek.WEDNESDAY,
+                dayName = "Wednesday",
+                shortDayName = "Wed",
+                isToday = false,
+                templateId = null,
+                templateName = null,
+                exerciseCount = 0
+            )
         )
 
         ScheduleScreenContent(
             uiState = ScheduleUiState(
                 days = sampleDays,
+                availableTemplates = emptyList(),
+                selectedDay = null,
                 isLoading = false
             ),
             onDayClick = {},

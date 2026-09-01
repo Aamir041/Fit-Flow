@@ -54,10 +54,6 @@ import com.fitflow.app.ui.components.ConfirmDeleteDialog
 import com.fitflow.app.ui.components.EmptyStateCard
 import com.fitflow.app.ui.components.FitFlowTopBar
 import com.fitflow.app.ui.components.SprintBadge
-import com.fitflow.app.ui.theme.CategorySprint
-import com.fitflow.app.ui.theme.CrimsonAlert
-import com.fitflow.app.ui.theme.CyanAccent
-import com.fitflow.app.ui.theme.EmeraldPrimary
 import com.fitflow.app.ui.theme.FitFlowTheme
 
 @Composable
@@ -112,8 +108,8 @@ fun ExerciseLibraryScreenContent(
         floatingActionButton = {
             FloatingActionButton(
                 onClick = onOpenAddDialog,
-                containerColor = EmeraldPrimary,
-                contentColor = MaterialTheme.colorScheme.background,
+                containerColor = MaterialTheme.colorScheme.primary,
+                contentColor = MaterialTheme.colorScheme.onPrimary,
                 shape = CircleShape
             ) {
                 Icon(imageVector = Icons.Default.Add, contentDescription = "Add Custom Movement")
@@ -156,7 +152,7 @@ fun ExerciseLibraryScreenContent(
                 singleLine = true,
                 shape = RoundedCornerShape(14.dp),
                 colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = EmeraldPrimary,
+                    focusedBorderColor = MaterialTheme.colorScheme.primary,
                     unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant,
                     focusedContainerColor = MaterialTheme.colorScheme.surface,
                     unfocusedContainerColor = MaterialTheme.colorScheme.surface
@@ -186,7 +182,7 @@ fun ExerciseLibraryScreenContent(
                         .weight(1f),
                     contentAlignment = Alignment.Center
                 ) {
-                    CircularProgressIndicator(color = EmeraldPrimary)
+                    CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
                 }
             } else if (uiState.exercises.isEmpty()) {
                 Box(
@@ -266,7 +262,7 @@ fun ExerciseCatalogItemCard(
             .clip(RoundedCornerShape(16.dp))
             .border(
                 1.dp,
-                if (exercise.isSprint) CategorySprint.copy(alpha = 0.4f) else MaterialTheme.colorScheme.outlineVariant,
+                if (exercise.isSprint) MaterialTheme.colorScheme.primary.copy(alpha = 0.4f) else MaterialTheme.colorScheme.outlineVariant,
                 RoundedCornerShape(16.dp)
             )
             .clickable(onClick = onEdit),
@@ -293,13 +289,13 @@ fun ExerciseCatalogItemCard(
                         Box(
                             modifier = Modifier
                                 .clip(RoundedCornerShape(4.dp))
-                                .background(CyanAccent.copy(alpha = 0.15f))
+                                .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.15f))
                                 .padding(horizontal = 5.dp, vertical = 1.dp)
                         ) {
                             Text(
                                 text = "CUSTOM",
                                 style = MaterialTheme.typography.labelSmall,
-                                color = CyanAccent,
+                                color = MaterialTheme.colorScheme.primary,
                                 fontSize = 8.sp,
                                 fontWeight = FontWeight.Bold
                             )

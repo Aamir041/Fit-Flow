@@ -32,10 +32,15 @@ import com.fitflow.app.ui.templates.TemplateEditViewModel
 import com.fitflow.app.ui.templates.TemplatesScreen
 import com.fitflow.app.ui.templates.TemplatesViewModel
 
+import com.fitflow.app.data.local.ThemePreferences
+import com.fitflow.app.ui.settings.SettingsScreen
+import com.fitflow.app.ui.settings.SettingsViewModel
+
 @Composable
 fun FitFlowNavGraph(
     navController: NavHostController,
     repository: FitFlowRepository,
+    themePreferences: ThemePreferences,
     innerPadding: PaddingValues,
     modifier: Modifier = Modifier
 ) {
@@ -51,7 +56,7 @@ fun FitFlowNavGraph(
         // Home Screen
         composable(route = Screen.Home.route) {
             val homeViewModel: HomeViewModel = viewModel(
-                factory = ViewModelFactory(repository)
+                factory = ViewModelFactory(repository = repository)
             )
             HomeScreen(
                 viewModel = homeViewModel,
@@ -59,6 +64,9 @@ fun FitFlowNavGraph(
                     navController.navigate(Screen.Schedule.route) {
                         launchSingleTop = true
                     }
+                },
+                onNavigateToSettings = {
+                    navController.navigate(Screen.Settings.route)
                 }
             )
         }
@@ -191,9 +199,34 @@ fun FitFlowNavGraph(
         // History & Stats Screen
         composable(route = Screen.History.route) {
             val historyViewModel: HistoryViewModel = viewModel(
-                factory = ViewModelFactory(repository)
+                factory = ViewModelFactory(repository = repository)
             )
             HistoryScreen(viewModel = historyViewModel)
+        }
+
+        // Settings Screen
+        composable(
+            route = Screen.Settings.route,
+            enterTransition = {
+                slideIntoContainer(
+                    AnimatedContentTransitionScope.SlideDirection.Start,
+                    animationSpec = tween(300)
+                ) + fadeIn(animationSpec = tween(300))
+            },
+            popExitTransition = {
+                slideOutOfContainer(
+                    AnimatedContentTransitionScope.SlideDirection.End,
+                    animationSpec = tween(300)
+                ) + fadeOut(animationSpec = tween(300))
+            }
+        ) {
+            val settingsViewModel: SettingsViewModel = viewModel(
+                factory = ViewModelFactory(themePreferences = themePreferences)
+            )
+            SettingsScreen(
+                viewModel = settingsViewModel,
+                onNavigateBack = { navController.popBackStack() }
+            )
         }
     }
 }

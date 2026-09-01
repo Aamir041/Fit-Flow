@@ -2,60 +2,36 @@ package com.fitflow.app.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
-// Primary Electric Palette
-val EmeraldPrimary = Color(0xFF00E676)
-val EmeraldLight = Color(0xFF69F0AE)
-val EmeraldDark = Color(0xFF00B248)
+// ==========================================
+// Base Dark Palette (Obsidian & Slate)
+// ==========================================
+val DarkBackground = Color(0xFF0D0E12)
+val DarkSurface = Color(0xFF161820)
+val DarkSurfaceVariant = Color(0xFF20232E)
+val DarkSurfaceElevated = Color(0xFF292D3B)
+val DarkOutline = Color(0xFF343949)
+val DarkOutlineVariant = Color(0xFF232735)
 
-// Secondary Cyan / Electric Blue
-val CyanAccent = Color(0xFF00E5FF)
-val CyanDark = Color(0xFF00B0FF)
+val DarkTextPrimary = Color(0xFFF6F7FB)
+val DarkTextSecondary = Color(0xFF9DA4B6)
+val DarkTextMuted = Color(0xFF676E80)
 
-// Tertiary Amber / Warm Orange
-val AmberAccent = Color(0xFFFF9100)
-val AmberLight = Color(0xFFFFD54F)
+// ==========================================
+// Base Light Palette (Crisp Pure Slate)
+// ==========================================
+val LightBackground = Color(0xFFF5F7FA)
+val LightSurface = Color(0xFFFFFFFF)
+val LightSurfaceVariant = Color(0xFFEEF1F6)
+val LightSurfaceElevated = Color(0xFFE2E6EE)
+val LightOutline = Color(0xFFCFD6E2)
+val LightOutlineVariant = Color(0xFFDFE4ED)
 
-// Crimson / Alert
-val CrimsonAlert = Color(0xFFFF3D71)
-val CrimsonLight = Color(0xFFFF80AB)
+val LightTextPrimary = Color(0xFF10131A)
+val LightTextSecondary = Color(0xFF586274)
+val LightTextMuted = Color(0xFF8E97A8)
 
-// Dark Theme Surfaces (Sleek Obsidian & Slate)
-val BackgroundDark = Color(0xFF0D0E12)
-val SurfaceDark = Color(0xFF16181F)
-val SurfaceVariantDark = Color(0xFF20232C)
-val SurfaceElevatedDark = Color(0xFF292C37)
-val OutlineDark = Color(0xFF323644)
-val OutlineVariantDark = Color(0xFF252834)
-
-// Dark Theme Text
-val TextPrimaryDark = Color(0xFFF6F7FA)
-val TextSecondaryDark = Color(0xFF9FA5B5)
-val TextMutedDark = Color(0xFF686E7E)
-
-// Light Theme Palette
-val BackgroundLight = Color(0xFFF7F8FA)
-val SurfaceLight = Color(0xFFFFFFFF)
-val SurfaceVariantLight = Color(0xFFEEF0F5)
-val SurfaceElevatedLight = Color(0xFFE4E7EE)
-val OutlineLight = Color(0xFFD0D5DD)
-val OutlineVariantLight = Color(0xFFE2E6EC)
-
-val TextPrimaryLight = Color(0xFF111317)
-val TextSecondaryLight = Color(0xFF4B5565)
-val TextMutedLight = Color(0xFF8C93A4)
-
-// Category Colors for Badges
-val CategoryChest = Color(0xFFFF5252)
-val CategoryBack = Color(0xFF448AFF)
-val CategoryLegs = Color(0xFF69F0AE)
-val CategoryShoulders = Color(0xFFFFAB40)
-val CategoryArms = Color(0xFFE040FB)
-val CategoryCore = Color(0xFFFFD740)
-val CategoryCardio = Color(0xFF18FFFF)
-val CategoryGlutes = Color(0xFFFF4081)
-val CategoryForearms = Color(0xFF7C4DFF)
-val CategoryTraps = Color(0xFF536DFE)
-val CategoryCalves = Color(0xFF00E5FF)
-val CategoryFullBody = Color(0xFFFF6E40)
-val CategorySprint = Color(0xFFFFD600)
-
+// ==========================================
+// Semantic Error & System Alert Tokens
+// ==========================================
+val ErrorCrimson = Color(0xFFFF3366)
+val OnErrorWhite = Color(0xFFFFFFFF)

@@ -20,11 +20,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 
+import androidx.compose.material.icons.filled.Settings
+
 @Composable
 fun FitFlowTopBar(
     title: String,
     subtitle: String? = null,
     onBackClick: (() -> Unit)? = null,
+    onSettingsClick: (() -> Unit)? = null,
     actions: @Composable RowScope.() -> Unit = {}
 ) {
     Row(
@@ -71,8 +74,18 @@ fun FitFlowTopBar(
         }
 
         Row(
-            verticalAlignment = Alignment.CenterVertically,
-            content = actions
-        )
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            actions()
+            if (onSettingsClick != null) {
+                IconButton(onClick = onSettingsClick) {
+                    Icon(
+                        imageVector = Icons.Default.Settings,
+                        contentDescription = "Settings",
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+        }
     }
 }

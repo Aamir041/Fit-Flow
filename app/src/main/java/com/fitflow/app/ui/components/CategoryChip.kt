@@ -23,54 +23,38 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.fitflow.app.ui.theme.AmberAccent
-import com.fitflow.app.ui.theme.CategoryArms
-import com.fitflow.app.ui.theme.CategoryBack
-import com.fitflow.app.ui.theme.CategoryCalves
-import com.fitflow.app.ui.theme.CategoryCardio
-import com.fitflow.app.ui.theme.CategoryChest
-import com.fitflow.app.ui.theme.CategoryCore
-import com.fitflow.app.ui.theme.CategoryForearms
-import com.fitflow.app.ui.theme.CategoryFullBody
-import com.fitflow.app.ui.theme.CategoryGlutes
-import com.fitflow.app.ui.theme.CategoryLegs
-import com.fitflow.app.ui.theme.CategoryShoulders
-import com.fitflow.app.ui.theme.CategorySprint
-import com.fitflow.app.ui.theme.CategoryTraps
-import com.fitflow.app.ui.theme.CyanAccent
-import com.fitflow.app.ui.theme.EmeraldPrimary
 
-private val DynamicColors = listOf(
-    Color(0xFFFF4081), // Pink
-    Color(0xFF7C4DFF), // Deep Purple
-    Color(0xFF536DFE), // Indigo
-    Color(0xFF00E5FF), // Cyan
-    Color(0xFFFFAB40), // Orange
+private val CategoryHuePalette = listOf(
+    Color(0xFFFF5252), // Red
+    Color(0xFF448AFF), // Blue
     Color(0xFF69F0AE), // Mint
-    Color(0xFFFFD740), // Amber
-    Color(0xFFE040FB), // Fuchsia
-    Color(0xFFFF6E40)  // Coral
+    Color(0xFFFFAB40), // Orange
+    Color(0xFFE040FB), // Purple
+    Color(0xFFFFD740), // Gold
+    Color(0xFF18FFFF), // Cyan
+    Color(0xFFFF4081), // Pink
+    Color(0xFF7C4DFF), // Indigo
+    Color(0xFF00E5FF)  // Aqua
 )
 
 fun getCategoryColor(category: String): Color {
     return when (category.trim().lowercase()) {
-        "chest" -> CategoryChest
-        "back" -> CategoryBack
-        "legs" -> CategoryLegs
-        "shoulders" -> CategoryShoulders
-        "arms" -> CategoryArms
-        "core", "abs" -> CategoryCore
-        "cardio" -> CategoryCardio
-        "glutes", "glute" -> CategoryGlutes
-        "forearms", "forearm" -> CategoryForearms
-        "traps", "trap" -> CategoryTraps
-        "calves", "calf" -> CategoryCalves
-        "full body", "fullbody" -> CategoryFullBody
-        "sprint", "sprints", "hiit" -> CategorySprint
+        "chest" -> Color(0xFFFF5252)
+        "back" -> Color(0xFF448AFF)
+        "legs" -> Color(0xFF69F0AE)
+        "shoulders" -> Color(0xFFFFAB40)
+        "arms" -> Color(0xFFE040FB)
+        "core", "abs" -> Color(0xFFFFD740)
+        "cardio" -> Color(0xFF18FFFF)
+        "glutes", "glute" -> Color(0xFFFF4081)
+        "forearms", "forearm" -> Color(0xFF7C4DFF)
+        "traps", "trap" -> Color(0xFF536DFE)
+        "calves", "calf" -> Color(0xFF00E5FF)
+        "full body", "fullbody" -> Color(0xFFFF6E40)
+        "sprint", "sprints", "hiit" -> Color(0xFFFFD600)
         else -> {
-            // Deterministic dynamic color selection based on muscle group name hash
             val hash = kotlin.math.abs(category.hashCode())
-            DynamicColors[hash % DynamicColors.size]
+            CategoryHuePalette[hash % CategoryHuePalette.size]
         }
     }
 }
@@ -102,25 +86,26 @@ fun SprintBadge(
     durationSeconds: Int? = null,
     modifier: Modifier = Modifier
 ) {
+    val sprintColor = Color(0xFFFFD600)
     Box(
         modifier = modifier
             .clip(RoundedCornerShape(6.dp))
-            .background(CategorySprint.copy(alpha = 0.18f))
-            .border(1.dp, CategorySprint.copy(alpha = 0.5f), RoundedCornerShape(6.dp))
+            .background(sprintColor.copy(alpha = 0.18f))
+            .border(1.dp, sprintColor.copy(alpha = 0.5f), RoundedCornerShape(6.dp))
             .padding(horizontal = 7.dp, vertical = 3.dp)
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Icon(
                 imageVector = Icons.Default.ElectricBolt,
                 contentDescription = null,
-                tint = CategorySprint,
+                tint = sprintColor,
                 modifier = Modifier.size(12.dp)
             )
             Spacer(modifier = Modifier.width(3.dp))
             Text(
                 text = if (durationSeconds != null && durationSeconds > 0) "SPRINT ${durationSeconds}s" else "SPRINT",
                 style = MaterialTheme.typography.labelSmall,
-                color = CategorySprint,
+                color = sprintColor,
                 fontWeight = FontWeight.Bold,
                 fontSize = 9.sp
             )
@@ -135,7 +120,7 @@ fun CategoryFilterChip(
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val activeColor = if (category == "All") EmeraldPrimary else getCategoryColor(category)
+    val activeColor = if (category == "All") MaterialTheme.colorScheme.primary else getCategoryColor(category)
     val background = if (isSelected) activeColor.copy(alpha = 0.2f) else MaterialTheme.colorScheme.surfaceVariant
     val borderColor = if (isSelected) activeColor else MaterialTheme.colorScheme.outlineVariant
 
@@ -155,4 +140,3 @@ fun CategoryFilterChip(
         )
     }
 }
-

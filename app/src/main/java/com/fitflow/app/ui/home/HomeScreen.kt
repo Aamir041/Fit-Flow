@@ -43,9 +43,6 @@ import androidx.compose.ui.unit.sp
 import com.fitflow.app.ui.components.EmptyStateCard
 import com.fitflow.app.ui.components.FitFlowTopBar
 import com.fitflow.app.ui.components.RestTimerDialog
-import com.fitflow.app.ui.theme.CyanAccent
-import com.fitflow.app.ui.theme.EmeraldLight
-import com.fitflow.app.ui.theme.EmeraldPrimary
 import com.fitflow.app.ui.theme.FitFlowTheme
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
@@ -54,6 +51,7 @@ import java.time.format.DateTimeFormatter
 fun HomeScreen(
     viewModel: HomeViewModel,
     onNavigateToSchedule: () -> Unit,
+    onNavigateToSettings: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -91,6 +89,7 @@ fun HomeScreen(
             viewModel.closeSetLogger()
         },
         onNavigateToSchedule = onNavigateToSchedule,
+        onNavigateToSettings = onNavigateToSettings,
         modifier = modifier
     )
 }
@@ -109,6 +108,7 @@ fun HomeScreenContent(
     onCloseTimer: () -> Unit,
     onCloseSetLogger: () -> Unit,
     onNavigateToSchedule: () -> Unit,
+    onNavigateToSettings: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     val dateFormatter = DateTimeFormatter.ofPattern("EEEE, MMMM d")
@@ -123,7 +123,8 @@ fun HomeScreenContent(
         topBar = {
             FitFlowTopBar(
                 title = "Today's Workout",
-                subtitle = formattedDate
+                subtitle = formattedDate,
+                onSettingsClick = onNavigateToSettings
             )
         },
         modifier = modifier.fillMaxSize(),
@@ -136,7 +137,7 @@ fun HomeScreenContent(
                     .padding(innerPadding),
                 contentAlignment = Alignment.Center
             ) {
-                CircularProgressIndicator(color = EmeraldPrimary)
+                CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
             }
         } else if (uiState.assignedTemplate == null || uiState.exercises.isEmpty()) {
             // Empty state when no template is assigned for today
@@ -249,7 +250,7 @@ fun WorkoutOverviewCard(
             .background(MaterialTheme.colorScheme.surface)
             .border(
                 1.dp,
-                if (isAllDone) EmeraldPrimary.copy(alpha = 0.6f) else MaterialTheme.colorScheme.outlineVariant,
+                if (isAllDone) MaterialTheme.colorScheme.primary.copy(alpha = 0.6f) else MaterialTheme.colorScheme.outlineVariant,
                 RoundedCornerShape(20.dp)
             )
             .padding(18.dp)
@@ -264,7 +265,7 @@ fun WorkoutOverviewCard(
                     Text(
                         text = "ACTIVE SPLIT",
                         style = MaterialTheme.typography.labelSmall,
-                        color = EmeraldPrimary,
+                        color = MaterialTheme.colorScheme.primary,
                         letterSpacing = 1.sp
                     )
                     Text(
@@ -279,21 +280,21 @@ fun WorkoutOverviewCard(
                     Box(
                         modifier = Modifier
                             .clip(RoundedCornerShape(8.dp))
-                            .background(EmeraldPrimary.copy(alpha = 0.15f))
+                            .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.15f))
                             .padding(horizontal = 10.dp, vertical = 5.dp)
                     ) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Icon(
                                 imageVector = Icons.Default.Celebration,
                                 contentDescription = null,
-                                tint = EmeraldPrimary,
+                                tint = MaterialTheme.colorScheme.primary,
                                 modifier = Modifier.size(16.dp)
                             )
                             Spacer(modifier = Modifier.padding(2.dp))
                             Text(
                                 text = "Crushed It!",
                                 style = MaterialTheme.typography.labelSmall,
-                                color = EmeraldPrimary,
+                                color = MaterialTheme.colorScheme.primary,
                                 fontWeight = FontWeight.Bold
                             )
                         }
@@ -318,7 +319,7 @@ fun WorkoutOverviewCard(
                     text = "${(progressPercent * 100).toInt()}%",
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.Bold,
-                    color = if (isAllDone) EmeraldPrimary else MaterialTheme.colorScheme.onSurface
+                    color = if (isAllDone) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
                 )
             }
 
@@ -330,7 +331,7 @@ fun WorkoutOverviewCard(
                     .fillMaxWidth()
                     .height(8.dp)
                     .clip(RoundedCornerShape(4.dp)),
-                color = EmeraldPrimary,
+                color = MaterialTheme.colorScheme.primary,
                 trackColor = MaterialTheme.colorScheme.surfaceVariant,
                 strokeCap = StrokeCap.Round
             )
