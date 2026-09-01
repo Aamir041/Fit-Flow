@@ -46,6 +46,8 @@ data class HomeUiState(
     val progressPercent: Float = 0f,
     val isLoading: Boolean = true,
     val activeRestTimer: ExerciseLogItem? = null,
-    val selectedExerciseForLogging: ExerciseLogItem? = null
+    val selectedExerciseForLogging: ExerciseLogItem? = null,
+    val todayWeightLog: Double? = null,
+    val lastRecordedWeight: Double? = null
 )
 

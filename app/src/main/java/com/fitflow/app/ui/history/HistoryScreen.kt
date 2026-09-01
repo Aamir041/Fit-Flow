@@ -26,10 +26,12 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ChevronLeft
 import androidx.compose.material.icons.filled.ChevronRight
+import androidx.compose.material.icons.filled.DeleteOutline
 import androidx.compose.material.icons.filled.DeleteSweep
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.FitnessCenter
 import androidx.compose.material.icons.filled.History
+import androidx.compose.material.icons.filled.MonitorWeight
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Upload
 import androidx.compose.material3.AlertDialog
@@ -65,11 +67,13 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.fitflow.app.data.local.entity.ExerciseEntity
 import com.fitflow.app.data.local.entity.FoodLogEntity
+import com.fitflow.app.data.local.entity.WeightLogEntity
 import com.fitflow.app.data.local.entity.WorkoutLogEntity
 import com.fitflow.app.data.local.relation.WorkoutLogWithExercise
 import com.fitflow.app.ui.components.CategoryBadge
 import com.fitflow.app.ui.components.EmptyStateCard
 import com.fitflow.app.ui.components.FitFlowTopBar
+import com.fitflow.app.ui.components.LogWeightDialog
 import com.fitflow.app.ui.components.SprintBadge
 import com.fitflow.app.ui.theme.FitFlowTheme
 import java.time.LocalDate
@@ -106,12 +110,13 @@ fun HistoryScreen(
     }
 
     var showDeleteDialog by remember { mutableStateOf(false) }
+    var showDeleteWeightLogsDialog by remember { mutableStateOf(false) }
 
     if (showDeleteDialog) {
         AlertDialog(
             onDismissRequest = { showDeleteDialog = false },
-            title = { Text("Clear History?") },
-            text = { Text("This will permanently delete all your logged workouts. This action cannot be undone.") },
+            title = { Text("Clear All History?") },
+            text = { Text("This will permanently delete all your logged workouts, food logs, and weight history. This action cannot be undone.") },
             confirmButton = {
                 TextButton(
                     onClick = {
@@ -130,12 +135,38 @@ fun HistoryScreen(
         )
     }
 
+    if (showDeleteWeightLogsDialog) {
+        AlertDialog(
+            onDismissRequest = { showDeleteWeightLogsDialog = false },
+            title = { Text("Delete All Weight Logs?") },
+            text = { Text("This will permanently delete all your recorded body weight history. This action cannot be undone.") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        viewModel.deleteAllWeightLogs()
+                        showDeleteWeightLogsDialog = false
+                    }
+                ) {
+                    Text("Delete Weight Logs", color = MaterialTheme.colorScheme.error)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteWeightLogsDialog = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
+
     HistoryScreenContent(
         uiState = uiState,
         snackbarHostState = snackbarHostState,
         onExport = { exportLauncher.launch("fitflow_history_${System.currentTimeMillis()}.json") },
         onImport = { importLauncher.launch(arrayOf("application/json")) },
         onClear = { showDeleteDialog = true },
+        onClearWeightLogs = { showDeleteWeightLogsDialog = true },
+        onSaveWeight = { dateStr, weightKg -> viewModel.saveWeight(dateStr, weightKg) },
+        onDeleteWeight = { dateStr -> viewModel.deleteWeight(dateStr) },
         modifier = modifier
     )
 }
@@ -147,21 +178,26 @@ fun HistoryScreenContent(
     onExport: () -> Unit,
     onImport: () -> Unit,
     onClear: () -> Unit,
+    onClearWeightLogs: () -> Unit = {},
+    onSaveWeight: (dateStr: String, weightKg: Double) -> Unit = { _, _ -> },
+    onDeleteWeight: (dateStr: String) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     var showMenu by remember { mutableStateOf(false) }
     var selectedMonth by remember { mutableStateOf(YearMonth.now()) }
     var selectedDateForDetails by remember { mutableStateOf<String?>(null) }
+    var showLogWeightDialog by remember { mutableStateOf(false) }
+    var weightDialogDate by remember { mutableStateOf(LocalDate.now()) }
 
     Scaffold(
         topBar = {
             FitFlowTopBar(
-                title = "Workout History",
-                subtitle = "Track your consistency and personal records",
+                title = "Stats",
+                subtitle = "Track your consistency, personal records, and weight progress",
                 actions = {
                     Box {
                         IconButton(onClick = { showMenu = true }) {
-                            Icon(Icons.Default.MoreVert, contentDescription = "History Options")
+                            Icon(Icons.Default.MoreVert, contentDescription = "Stats Options")
                         }
                         DropdownMenu(
                             expanded = showMenu,
@@ -184,6 +220,20 @@ fun HistoryScreenContent(
                                 leadingIcon = { Icon(Icons.Default.Download, contentDescription = null) }
                             )
                             HorizontalDivider()
+                            DropdownMenuItem(
+                                text = { Text("Clear Weight Logs", color = MaterialTheme.colorScheme.error) },
+                                onClick = {
+                                    showMenu = false
+                                    onClearWeightLogs()
+                                },
+                                leadingIcon = { 
+                                    Icon(
+                                        Icons.Default.DeleteOutline, 
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.error
+                                    ) 
+                                }
+                            )
                             DropdownMenuItem(
                                 text = { Text("Clear All History", color = MaterialTheme.colorScheme.error) },
                                 onClick = {
@@ -224,7 +274,7 @@ fun HistoryScreenContent(
                 contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                // Monthly GitHub-style Activity Contribution Heatmap
+                // 1. Monthly GitHub-style Activity Contribution Heatmap (Above)
                 item {
                     MonthContributionHeatmap(
                         yearMonth = selectedMonth,
@@ -238,20 +288,61 @@ fun HistoryScreenContent(
                     )
                 }
 
+                // 2. Weight Progression Line Graph Card (Below)
+                item {
+                    WeightTrackingSection(
+                        timeline = uiState.weightTimeline,
+                        stats = uiState.weightStats,
+                        onLogWeightClick = {
+                            weightDialogDate = LocalDate.now()
+                            showLogWeightDialog = true
+                        }
+                    )
+                }
+
                 item {
                     Spacer(modifier = Modifier.height(24.dp))
                 }
             }
         }
 
-        // Dialog showing history of exercises & foods on selected date
+        // Dialog for logging / editing weight
+        if (showLogWeightDialog) {
+            val dateStr = weightDialogDate.format(DateTimeFormatter.ISO_LOCAL_DATE)
+            val existingWeight = uiState.weightLogs.firstOrNull { it.date == dateStr }?.weightKg
+            LogWeightDialog(
+                initialDate = weightDialogDate,
+                currentWeight = uiState.weightStats.latestWeight,
+                existingRecordedWeight = existingWeight,
+                onSave = { savedDateStr, weightKg ->
+                    onSaveWeight(savedDateStr, weightKg)
+                },
+                onDelete = { deletedDateStr ->
+                    onDeleteWeight(deletedDateStr)
+                },
+                onDismiss = { showLogWeightDialog = false }
+            )
+        }
+
+        // Dialog showing history of exercises, foods & weight on selected date
         selectedDateForDetails?.let { dateKey ->
             val logsForDay = uiState.groupedByDate[dateKey] ?: emptyList()
             val foodLogsForDay = uiState.foodLogsByDate[dateKey] ?: emptyList()
+            val weightLogForDay = uiState.weightLogs.firstOrNull { it.date == dateKey }
+
             DayWorkoutDetailsDialog(
                 dateKey = dateKey,
                 logs = logsForDay,
                 foodLogs = foodLogsForDay,
+                weightLog = weightLogForDay,
+                onLogWeightForDay = {
+                    try {
+                        weightDialogDate = LocalDate.parse(dateKey, DateTimeFormatter.ISO_LOCAL_DATE)
+                    } catch (e: Exception) {
+                        weightDialogDate = LocalDate.now()
+                    }
+                    showLogWeightDialog = true
+                },
                 onDismiss = { selectedDateForDetails = null }
             )
         }
@@ -484,6 +575,8 @@ fun DayWorkoutDetailsDialog(
     dateKey: String,
     logs: List<WorkoutLogWithExercise>,
     foodLogs: List<FoodLogEntity> = emptyList(),
+    weightLog: WeightLogEntity? = null,
+    onLogWeightForDay: (() -> Unit)? = null,
     onDismiss: () -> Unit
 ) {
     val formattedDate = try {
@@ -496,7 +589,8 @@ fun DayWorkoutDetailsDialog(
     val totalCalories = foodLogs.sumOf { it.calories }
     val totalWorkouts = logs.size
     val totalFoods = foodLogs.size
-    val isEmpty = totalWorkouts == 0 && totalFoods == 0
+    val hasWeight = weightLog != null
+    val isEmpty = totalWorkouts == 0 && totalFoods == 0 && !hasWeight
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -512,9 +606,10 @@ fun DayWorkoutDetailsDialog(
                 Text(
                     text = when {
                         isEmpty -> "Rest day / No logs recorded"
-                        totalWorkouts > 0 && totalFoods > 0 -> "$totalWorkouts movements • $totalCalories kcal"
-                        totalWorkouts > 0 -> "$totalWorkouts movements completed"
-                        else -> "$totalFoods food items • $totalCalories kcal"
+                        totalWorkouts > 0 && totalFoods > 0 -> "$totalWorkouts movements • $totalCalories kcal${if (hasWeight) " • ${weightLog.weightKg} kg" else ""}"
+                        totalWorkouts > 0 -> "$totalWorkouts movements completed${if (hasWeight) " • ${weightLog.weightKg} kg" else ""}"
+                        totalFoods > 0 -> "$totalFoods food items • $totalCalories kcal${if (hasWeight) " • ${weightLog.weightKg} kg" else ""}"
+                        else -> "Weight logged: ${weightLog?.weightKg} kg"
                     },
                     style = MaterialTheme.typography.labelSmall,
                     color = if (isEmpty) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.primary,
@@ -524,18 +619,29 @@ fun DayWorkoutDetailsDialog(
         },
         text = {
             if (isEmpty) {
-                Box(
+                Column(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(vertical = 16.dp),
-                    contentAlignment = Alignment.Center
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     Text(
-                        text = "No workouts or food logs recorded for this day.",
+                        text = "No workouts, food logs, or weight recorded for this day.",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         textAlign = TextAlign.Center
                     )
+                    if (onLogWeightForDay != null) {
+                        TextButton(onClick = {
+                            onDismiss()
+                            onLogWeightForDay()
+                        }) {
+                            Icon(Icons.Default.MonitorWeight, contentDescription = null, modifier = Modifier.size(16.dp))
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text("Log Weight for this Day")
+                        }
+                    }
                 }
             } else {
                 Column(
@@ -544,6 +650,68 @@ fun DayWorkoutDetailsDialog(
                         .verticalScroll(rememberScrollState()),
                     verticalArrangement = Arrangement.spacedBy(14.dp)
                 ) {
+                    // Body Weight Section
+                    if (hasWeight) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text(
+                                text = "BODY WEIGHT",
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.primary,
+                                letterSpacing = 1.sp
+                            )
+                            if (onLogWeightForDay != null) {
+                                Text(
+                                    text = "Edit",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.primary,
+                                    fontWeight = FontWeight.Bold,
+                                    modifier = Modifier.clickable {
+                                        onDismiss()
+                                        onLogWeightForDay()
+                                    }
+                                )
+                            }
+                        }
+
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+                                .border(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f), RoundedCornerShape(12.dp))
+                                .padding(12.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(
+                                    imageVector = Icons.Default.MonitorWeight,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                                Spacer(modifier = Modifier.width(10.dp))
+                                Text(
+                                    text = "Recorded Weight",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                            }
+                            Text(
+                                text = "${weightLog.weightKg} kg",
+                                style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.ExtraBold,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                        }
+                    }
+
                     // 1. Workouts Section
                     if (logs.isNotEmpty()) {
                         Row(

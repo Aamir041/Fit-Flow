@@ -4,6 +4,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import android.content.Context
 import android.net.Uri
+import com.fitflow.app.data.local.model.calculateWeightSummaryStats
+import com.fitflow.app.data.local.model.calculateWeightTimeline
 import com.fitflow.app.data.repository.FitFlowRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -22,8 +24,9 @@ class HistoryViewModel(
     val uiState: StateFlow<HistoryUiState> = combine(
         repository.getCompletedLogs(),
         repository.getAllFoodLogs(),
+        repository.getAllWeightLogs(),
         _messageState
-    ) { logs, foodLogs, messagePair ->
+    ) { logs, foodLogs, weightLogs, messagePair ->
         val groupedWorkouts = logs.groupBy { it.log.date }
         val groupedFoods = foodLogs.groupBy { it.date }
         val distinctDatesCount = groupedWorkouts.keys.size
@@ -44,6 +47,9 @@ class HistoryViewModel(
             }
         }
 
+        val timeline = calculateWeightTimeline(weightLogs)
+        val stats = calculateWeightSummaryStats(weightLogs, timeline)
+
         HistoryUiState(
             completedLogs = logs,
             totalWorkoutsCount = distinctDatesCount,
@@ -51,6 +57,9 @@ class HistoryViewModel(
             totalVolumeKg = (totalVolume * 10).toInt() / 10.0,
             groupedByDate = groupedWorkouts,
             foodLogsByDate = groupedFoods,
+            weightLogs = weightLogs,
+            weightTimeline = timeline,
+            weightStats = stats,
             isLoading = false,
             message = messagePair.first,
             isSuccess = messagePair.second
@@ -60,6 +69,28 @@ class HistoryViewModel(
         started = SharingStarted.WhileSubscribed(5000),
         initialValue = HistoryUiState()
     )
+
+    fun saveWeight(date: String, weightKg: Double) {
+        viewModelScope.launch {
+            try {
+                repository.saveWeightLog(date, weightKg)
+                _messageState.update { "Weight logged successfully" to true }
+            } catch (e: Exception) {
+                _messageState.update { "Failed to log weight: ${e.message}" to false }
+            }
+        }
+    }
+
+    fun deleteWeight(date: String) {
+        viewModelScope.launch {
+            try {
+                repository.deleteWeightLogByDate(date)
+                _messageState.update { "Weight entry removed" to true }
+            } catch (e: Exception) {
+                _messageState.update { "Failed to remove weight: ${e.message}" to false }
+            }
+        }
+    }
 
     fun exportHistory(context: Context, uri: Uri) {
         viewModelScope.launch {
@@ -97,7 +128,18 @@ class HistoryViewModel(
     fun deleteHistory() {
         viewModelScope.launch {
             repository.clearAllHistory()
-            _messageState.update { "Workout history cleared" to true }
+            _messageState.update { "All workout, food, and weight history cleared" to true }
+        }
+    }
+
+    fun deleteAllWeightLogs() {
+        viewModelScope.launch {
+            try {
+                repository.deleteAllWeightLogs()
+                _messageState.update { "All weight logs deleted" to true }
+            } catch (e: Exception) {
+                _messageState.update { "Failed to delete weight logs: ${e.message}" to false }
+            }
         }
     }
 

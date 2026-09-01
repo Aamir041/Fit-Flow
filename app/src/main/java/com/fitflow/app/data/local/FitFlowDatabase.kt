@@ -9,12 +9,14 @@ import com.fitflow.app.data.local.dao.DayAssignmentDao
 import com.fitflow.app.data.local.dao.ExerciseDao
 import com.fitflow.app.data.local.dao.FoodLogDao
 import com.fitflow.app.data.local.dao.TemplateDao
+import com.fitflow.app.data.local.dao.WeightLogDao
 import com.fitflow.app.data.local.dao.WorkoutLogDao
 import com.fitflow.app.data.local.entity.DayAssignmentEntity
 import com.fitflow.app.data.local.entity.ExerciseEntity
 import com.fitflow.app.data.local.entity.FoodLogEntity
 import com.fitflow.app.data.local.entity.TemplateEntity
 import com.fitflow.app.data.local.entity.TemplateExerciseEntity
+import com.fitflow.app.data.local.entity.WeightLogEntity
 import com.fitflow.app.data.local.entity.WorkoutLogEntity
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -27,9 +29,10 @@ import kotlinx.coroutines.launch
         TemplateExerciseEntity::class,
         DayAssignmentEntity::class,
         WorkoutLogEntity::class,
-        FoodLogEntity::class
+        FoodLogEntity::class,
+        WeightLogEntity::class
     ],
-    version = 5,
+    version = 6,
     exportSchema = false
 )
 abstract class FitFlowDatabase : RoomDatabase() {
@@ -39,6 +42,7 @@ abstract class FitFlowDatabase : RoomDatabase() {
     abstract fun dayAssignmentDao(): DayAssignmentDao
     abstract fun workoutLogDao(): WorkoutLogDao
     abstract fun foodLogDao(): FoodLogDao
+    abstract fun weightLogDao(): WeightLogDao
 
     companion object {
         @Volatile
@@ -50,6 +54,23 @@ abstract class FitFlowDatabase : RoomDatabase() {
             }
         }
 
+        val MIGRATION_5_6 = object : androidx.room.migration.Migration(5, 6) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS weight_logs (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                        date TEXT NOT NULL,
+                        weightKg REAL NOT NULL,
+                        timestamp INTEGER NOT NULL
+                    )
+                    """.trimIndent()
+                )
+                db.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS index_weight_logs_date ON weight_logs (date)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_weight_logs_timestamp ON weight_logs (timestamp)")
+            }
+        }
+
         fun getDatabase(context: Context, scope: CoroutineScope = CoroutineScope(Dispatchers.IO)): FitFlowDatabase {
             return INSTANCE ?: synchronized(this) {
                 val instance = Room.databaseBuilder(
@@ -57,7 +78,7 @@ abstract class FitFlowDatabase : RoomDatabase() {
                     FitFlowDatabase::class.java,
                     "fitflow3.db"
                 )
-                    .addMigrations(MIGRATION_4_5)
+                    .addMigrations(MIGRATION_4_5, MIGRATION_5_6)
                     .fallbackToDestructiveMigration()
                     .addCallback(DatabaseCallback(scope))
                     .build()
@@ -84,7 +105,10 @@ abstract class FitFlowDatabase : RoomDatabase() {
             val templateDao = database.templateDao()
             val dayAssignmentDao = database.dayAssignmentDao()
 
-            if (exerciseDao.getExerciseCount() > 0) return
+            if (exerciseDao.getExerciseCount() > 0) {
+                seedSampleWeightLogs(database.weightLogDao())
+                return
+            }
 
             // 1. Seed Exercises
             val seedExercises = listOf(
@@ -247,6 +271,67 @@ abstract class FitFlowDatabase : RoomDatabase() {
                 DayAssignmentEntity(dayOfWeek = 7, templateId = null)            // Sun -> Rest
             )
             dayAssignmentDao.insertDayAssignments(defaultAssignments)
+
+            // 4. Seed Sample Weight Tracking Logs
+            seedSampleWeightLogs(database.weightLogDao())
+        }
+
+        suspend fun seedSampleWeightLogs(weightLogDao: com.fitflow.app.data.local.dao.WeightLogDao) {
+            if (weightLogDao.getWeightLogCount() > 0) return
+
+            val sampleWeightLogs = listOf(
+                WeightLogEntity(date = "2026-01-05", weightKg = 85.2),
+                WeightLogEntity(date = "2026-01-08", weightKg = 85.0),
+                WeightLogEntity(date = "2026-01-12", weightKg = 84.7),
+                WeightLogEntity(date = "2026-01-17", weightKg = 84.9),
+                WeightLogEntity(date = "2026-01-21", weightKg = 84.3),
+                WeightLogEntity(date = "2026-01-27", weightKg = 84.0),
+                WeightLogEntity(date = "2026-02-01", weightKg = 83.6),
+                WeightLogEntity(date = "2026-02-06", weightKg = 83.8),
+                WeightLogEntity(date = "2026-02-10", weightKg = 83.2),
+                WeightLogEntity(date = "2026-02-15", weightKg = 83.0),
+                WeightLogEntity(date = "2026-02-22", weightKg = 82.5),
+                WeightLogEntity(date = "2026-02-26", weightKg = 82.7),
+                WeightLogEntity(date = "2026-03-03", weightKg = 82.1),
+                WeightLogEntity(date = "2026-03-08", weightKg = 81.9),
+                WeightLogEntity(date = "2026-03-14", weightKg = 82.2),
+                WeightLogEntity(date = "2026-03-19", weightKg = 81.5),
+                WeightLogEntity(date = "2026-03-25", weightKg = 81.3),
+                WeightLogEntity(date = "2026-03-30", weightKg = 81.0),
+                WeightLogEntity(date = "2026-04-04", weightKg = 80.6),
+                WeightLogEntity(date = "2026-04-10", weightKg = 80.8),
+                WeightLogEntity(date = "2026-04-15", weightKg = 80.2),
+                WeightLogEntity(date = "2026-04-21", weightKg = 79.9),
+                WeightLogEntity(date = "2026-04-26", weightKg = 80.1),
+                WeightLogEntity(date = "2026-05-02", weightKg = 79.5),
+                WeightLogEntity(date = "2026-05-07", weightKg = 79.2),
+                WeightLogEntity(date = "2026-05-13", weightKg = 79.4),
+                WeightLogEntity(date = "2026-05-19", weightKg = 78.8),
+                WeightLogEntity(date = "2026-05-25", weightKg = 78.5),
+                WeightLogEntity(date = "2026-05-31", weightKg = 78.3),
+                WeightLogEntity(date = "2026-06-05", weightKg = 78.6),
+                WeightLogEntity(date = "2026-06-11", weightKg = 78.0),
+                WeightLogEntity(date = "2026-06-16", weightKg = 77.7),
+                WeightLogEntity(date = "2026-06-22", weightKg = 77.5),
+                WeightLogEntity(date = "2026-06-28", weightKg = 77.9),
+                WeightLogEntity(date = "2026-07-03", weightKg = 77.2),
+                WeightLogEntity(date = "2026-07-09", weightKg = 76.9),
+                WeightLogEntity(date = "2026-07-14", weightKg = 77.1),
+                WeightLogEntity(date = "2026-07-20", weightKg = 76.6),
+                WeightLogEntity(date = "2026-07-26", weightKg = 76.4),
+                WeightLogEntity(date = "2026-08-01", weightKg = 76.8),
+                WeightLogEntity(date = "2026-08-06", weightKg = 76.3),
+                WeightLogEntity(date = "2026-08-11", weightKg = 76.0),
+                WeightLogEntity(date = "2026-08-16", weightKg = 76.2),
+                WeightLogEntity(date = "2026-08-20", weightKg = 75.7),
+                WeightLogEntity(date = "2026-08-24", weightKg = 75.9),
+                WeightLogEntity(date = "2026-08-27", weightKg = 75.5),
+                WeightLogEntity(date = "2026-08-29", weightKg = 75.8),
+                WeightLogEntity(date = "2026-08-30", weightKg = 75.6),
+                WeightLogEntity(date = "2026-08-31", weightKg = 75.7),
+                WeightLogEntity(date = "2026-09-01", weightKg = 75.4)
+            )
+            weightLogDao.insertWeightLogs(sampleWeightLogs)
         }
     }
 }
