@@ -308,79 +308,9 @@ class FitFlowLogicTest {
     }
 
     @Test
-    fun testFoodLogEntityAndCalorieCalculations() {
-        val foodLogs = listOf(
-            com.fitflow.app.data.local.entity.FoodLogEntity(
-                id = 1,
-                date = "2026-08-31",
-                foodName = "Oatmeal with Honey",
-                quantity = 150.0,
-                unit = "g",
-                calories = 350,
-                mealTime = "Breakfast"
-            ),
-            com.fitflow.app.data.local.entity.FoodLogEntity(
-                id = 2,
-                date = "2026-08-31",
-                foodName = "Candy Bar",
-                quantity = 1.0,
-                unit = "candy",
-                calories = 220,
-                mealTime = "Snack"
-            ),
-            com.fitflow.app.data.local.entity.FoodLogEntity(
-                id = 3,
-                date = "2026-08-31",
-                foodName = "Grilled Chicken Breast",
-                quantity = 250.0,
-                unit = "g",
-                calories = 410,
-                mealTime = "Lunch"
-            ),
-            com.fitflow.app.data.local.entity.FoodLogEntity(
-                id = 4,
-                date = "2026-08-31",
-                foodName = "Protein Shake with Milk",
-                quantity = 500.0,
-                unit = "ml",
-                calories = 380,
-                mealTime = "Post-Workout"
-            )
-        )
-
-        val totalCalories = foodLogs.sumOf { it.calories }
-        assertEquals(1360, totalCalories)
-
-        val breakfastLogs = foodLogs.filter { it.mealTime == "Breakfast" }
-        assertEquals(1, breakfastLogs.size)
-        assertEquals("Oatmeal with Honey", breakfastLogs[0].foodName)
-        assertEquals("150.0 g", "${breakfastLogs[0].quantity} ${breakfastLogs[0].unit}")
-
-        val candyLog = foodLogs.first { it.unit == "candy" }
-        assertEquals(1.0, candyLog.quantity, 0.001)
-        assertEquals("candy", candyLog.unit)
-        assertEquals(220, candyLog.calories)
-    }
-
-    @Test
-    fun testFoodLogsDateGrouping() {
-        val foodLogs = listOf(
-            com.fitflow.app.data.local.entity.FoodLogEntity(id = 1, date = "2026-08-30", foodName = "Apple", quantity = 1.0, unit = "piece", calories = 95, mealTime = "Snack"),
-            com.fitflow.app.data.local.entity.FoodLogEntity(id = 2, date = "2026-08-31", foodName = "Banana", quantity = 2.0, unit = "unit", calories = 210, mealTime = "Snack"),
-            com.fitflow.app.data.local.entity.FoodLogEntity(id = 3, date = "2026-08-31", foodName = "Rice & Beans", quantity = 300.0, unit = "g", calories = 450, mealTime = "Dinner")
-        )
-
-        val grouped = foodLogs.groupBy { it.date }
-        assertEquals(2, grouped.keys.size)
-        assertEquals(1, grouped["2026-08-30"]?.size)
-        assertEquals(2, grouped["2026-08-31"]?.size)
-        assertEquals(660, grouped["2026-08-31"]?.sumOf { it.calories })
-    }
-
-    @Test
-    fun testHistoryBundleExportAndImportWithFoodLogs() {
+    fun testHistoryBundleExportAndImport() {
         val bundle = com.fitflow.app.data.local.model.HistoryBundleExportJson(
-            version = 2,
+            version = 3,
             app = "FitFlow",
             logs = listOf(
                 com.fitflow.app.data.local.model.HistoryLogExport(
@@ -390,44 +320,20 @@ class FitFlowLogicTest {
                     actualSets = 4,
                     actualReps = 8
                 )
-            ),
-            foodLogs = listOf(
-                com.fitflow.app.data.local.model.FoodLogExport(
-                    date = "2026-08-31",
-                    foodName = "Grilled Chicken",
-                    quantity = 200.0,
-                    unit = "g",
-                    calories = 330,
-                    mealTime = "Lunch"
-                ),
-                com.fitflow.app.data.local.model.FoodLogExport(
-                    date = "2026-08-31",
-                    foodName = "Candy",
-                    quantity = 1.0,
-                    unit = "candy",
-                    calories = 150,
-                    mealTime = "Snack"
-                )
             )
         )
 
         val jsonString = bundle.toJsonString()
         assertTrue(jsonString.contains("Barbell Squat"))
-        assertTrue(jsonString.contains("Grilled Chicken"))
-        assertTrue(jsonString.contains("candy"))
 
         val parsed = com.fitflow.app.data.local.model.HistoryBundleExportJson.fromJsonString(jsonString)
         assertEquals(1, parsed.logs.size)
         assertEquals("Barbell Squat", parsed.logs[0].exerciseName)
-        assertEquals(2, parsed.foodLogs.size)
-        assertEquals("Grilled Chicken", parsed.foodLogs[0].foodName)
-        assertEquals(330, parsed.foodLogs[0].calories)
-        assertEquals("candy", parsed.foodLogs[1].unit)
     }
 
     @Test
     fun testHistoryBundleBackwardCompatibilityWithVersion1() {
-        // v1 JSON without foodLogs array
+        // v1 JSON without foodLogs or weightLogs array
         val v1Json = """
             {
               "version": 1,
@@ -453,7 +359,6 @@ class FitFlowLogicTest {
         val parsed = com.fitflow.app.data.local.model.HistoryBundleExportJson.fromJsonString(v1Json)
         assertEquals(1, parsed.logs.size)
         assertEquals("Bench Press", parsed.logs[0].exerciseName)
-        assertTrue(parsed.foodLogs.isEmpty())
     }
 
     @Test
@@ -503,7 +408,7 @@ class FitFlowLogicTest {
         val setsJson = com.fitflow.app.data.local.model.WorkoutSetRecord.serializeSetsToJson(sets)
 
         val bundle = com.fitflow.app.data.local.model.HistoryBundleExportJson(
-            version = 2,
+            version = 3,
             app = "FitFlow",
             logs = listOf(
                 com.fitflow.app.data.local.model.HistoryLogExport(
@@ -515,8 +420,7 @@ class FitFlowLogicTest {
                     actualWeight = 55.0,
                     setsDataJson = setsJson
                 )
-            ),
-            foodLogs = emptyList()
+            )
         )
 
         val exportedJson = bundle.toJsonString()

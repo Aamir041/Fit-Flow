@@ -109,7 +109,7 @@ fun SettingsScreen(
         AlertDialog(
             onDismissRequest = { showClearAllDialog = false },
             title = { Text("Clear All History?") },
-            text = { Text("This will permanently delete all your logged workouts, food logs, and body weight records. This action cannot be undone.") },
+            text = { Text("This will permanently delete all your logged workouts and body weight records. This action cannot be undone.") },
             confirmButton = {
                 TextButton(
                     onClick = {
@@ -132,7 +132,7 @@ fun SettingsScreen(
         AlertDialog(
             onDismissRequest = { showClearWeightDialog = false },
             title = { Text("Delete All Weight Logs?") },
-            text = { Text("This will permanently delete all your recorded body weight history. Workout and food logs will not be affected.") },
+            text = { Text("This will permanently delete all your recorded body weight history. Workout logs will not be affected.") },
             confirmButton = {
                 TextButton(
                     onClick = {
@@ -306,7 +306,7 @@ fun SettingsScreenContent(
                             icon = Icons.Default.Upload,
                             iconColor = MaterialTheme.colorScheme.primary,
                             title = "Export History Backup",
-                            subtitle = "Save workouts, food entries, and weight logs to a JSON file",
+                            subtitle = "Save workouts and weight logs to a JSON file",
                             actionButton = {
                                 Button(
                                     onClick = onExport,
@@ -371,7 +371,7 @@ fun SettingsScreenContent(
                             icon = Icons.Default.DeleteSweep,
                             iconColor = MaterialTheme.colorScheme.error,
                             title = "Clear All History",
-                            subtitle = "Wipe all workouts, food logs, and weight records",
+                            subtitle = "Wipe all workouts and weight records",
                             actionButton = {
                                 Button(
                                     onClick = onClearAllHistory,

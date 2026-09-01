@@ -18,8 +18,6 @@ import com.fitflow.app.data.repository.FitFlowRepository
 import com.fitflow.app.di.ViewModelFactory
 import com.fitflow.app.ui.exercises.ExerciseLibraryScreen
 import com.fitflow.app.ui.exercises.ExerciseLibraryViewModel
-import com.fitflow.app.ui.food.FoodScreen
-import com.fitflow.app.ui.food.FoodViewModel
 import com.fitflow.app.ui.history.HistoryScreen
 import com.fitflow.app.ui.history.HistoryViewModel
 import com.fitflow.app.ui.home.HomeScreen
@@ -69,14 +67,6 @@ fun FitFlowNavGraph(
                     navController.navigate(Screen.Settings.route)
                 }
             )
-        }
-
-        // Food & Nutrition Screen
-        composable(route = Screen.Food.route) {
-            val foodViewModel: FoodViewModel = viewModel(
-                factory = ViewModelFactory(repository)
-            )
-            FoodScreen(viewModel = foodViewModel)
         }
 
         // Unified Library Hub Screen

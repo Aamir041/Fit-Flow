@@ -4,23 +4,18 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.FitnessCenter
 import androidx.compose.material.icons.filled.FolderCopy
-import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Insights
 import androidx.compose.material.icons.filled.Layers
 import androidx.compose.material.icons.filled.ListAlt
-import androidx.compose.material.icons.filled.Restaurant
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.outlined.CalendarMonth
 import androidx.compose.material.icons.outlined.FitnessCenter
 import androidx.compose.material.icons.outlined.FolderCopy
-import androidx.compose.material.icons.outlined.History
 import androidx.compose.material.icons.outlined.Insights
 import androidx.compose.material.icons.outlined.Layers
 import androidx.compose.material.icons.outlined.ListAlt
-import androidx.compose.material.icons.outlined.Restaurant
-import androidx.compose.ui.graphics.vector.ImageVector
-
-import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.outlined.Settings
+import androidx.compose.ui.graphics.vector.ImageVector
 
 sealed class Screen(
     val route: String,
@@ -33,13 +28,6 @@ sealed class Screen(
         title = "Today",
         selectedIcon = Icons.Filled.FitnessCenter,
         unselectedIcon = Icons.Outlined.FitnessCenter
-    )
-
-    data object Food : Screen(
-        route = "food",
-        title = "Food",
-        selectedIcon = Icons.Filled.Restaurant,
-        unselectedIcon = Icons.Outlined.Restaurant
     )
 
     data object Library : Screen(
@@ -100,9 +88,7 @@ sealed class Screen(
 
 val BottomNavItems = listOf(
     Screen.Home,
-    Screen.Food,
     Screen.Library,
     Screen.Schedule,
     Screen.History
 )
-

@@ -108,7 +108,7 @@ class SettingsViewModel(
         viewModelScope.launch {
             try {
                 repository.clearAllHistory()
-                _messageState.update { "All workout, food, and weight history cleared" to true }
+                _messageState.update { "All workout and weight history cleared" to true }
             } catch (e: Exception) {
                 _messageState.update { "Failed to clear history: ${e.message}" to false }
             }
