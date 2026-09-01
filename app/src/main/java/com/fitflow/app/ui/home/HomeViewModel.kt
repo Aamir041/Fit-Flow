@@ -38,7 +38,7 @@ class HomeViewModel(
         val dateString = date.format(DateTimeFormatter.ISO_LOCAL_DATE)
         val dayOfWeekValue = date.dayOfWeek.value
 
-        combine(
+        val workoutFlow = combine(
             repository.getAssignmentForDay(dayOfWeekValue),
             repository.getLogsForDate(dateString),
             _activeRestTimer,
@@ -120,20 +120,40 @@ class HomeViewModel(
             val completedCount = exerciseItems.count { it.isCompleted }
             val totalCount = exerciseItems.size
             val progressPercent = if (totalCount > 0) completedCount.toFloat() / totalCount.toFloat() else 0f
-
             val selectedExerciseItem = exerciseItems.find { it.exerciseId == selectedExerciseId }
 
-            HomeUiState(
-                currentDate = date,
-                dayOfWeek = date.dayOfWeek,
-                assignedTemplate = template,
-                exercises = exerciseItems,
+            WorkoutDayState(
+                template = template,
+                exerciseItems = exerciseItems,
                 completedCount = completedCount,
                 totalCount = totalCount,
                 progressPercent = progressPercent,
+                activeTimer = activeTimer,
+                selectedExerciseItem = selectedExerciseItem
+            )
+        }
+
+        val weightFlow = combine(
+            repository.getWeightLogForDate(dateString),
+            repository.getLatestWeightLog()
+        ) { weightLog, latestWeightLog ->
+            weightLog?.weightKg to latestWeightLog?.weightKg
+        }
+
+        combine(workoutFlow, weightFlow) { workoutState, weightPair ->
+            HomeUiState(
+                currentDate = date,
+                dayOfWeek = date.dayOfWeek,
+                assignedTemplate = workoutState.template,
+                exercises = workoutState.exerciseItems,
+                completedCount = workoutState.completedCount,
+                totalCount = workoutState.totalCount,
+                progressPercent = workoutState.progressPercent,
                 isLoading = false,
-                activeRestTimer = activeTimer,
-                selectedExerciseForLogging = selectedExerciseItem
+                activeRestTimer = workoutState.activeTimer,
+                selectedExerciseForLogging = workoutState.selectedExerciseItem,
+                todayWeightLog = weightPair.first,
+                lastRecordedWeight = weightPair.second
             )
         }
     }.stateIn(
@@ -141,6 +161,20 @@ class HomeViewModel(
         started = SharingStarted.WhileSubscribed(5000),
         initialValue = HomeUiState()
     )
+
+    fun saveTodayWeight(weightKg: Double) {
+        viewModelScope.launch {
+            val dateString = _selectedDate.value.format(DateTimeFormatter.ISO_LOCAL_DATE)
+            repository.saveWeightLog(dateString, weightKg)
+        }
+    }
+
+    fun deleteTodayWeight() {
+        viewModelScope.launch {
+            val dateString = _selectedDate.value.format(DateTimeFormatter.ISO_LOCAL_DATE)
+            repository.deleteWeightLogByDate(dateString)
+        }
+    }
 
     fun openSetLogger(item: ExerciseLogItem) {
         _selectedExerciseForLoggingId.value = item.exerciseId
@@ -408,4 +442,14 @@ class HomeViewModel(
         _selectedDate.value = date
     }
 }
+
+private data class WorkoutDayState(
+    val template: com.fitflow.app.data.local.relation.TemplateWithExercises?,
+    val exerciseItems: List<ExerciseLogItem>,
+    val completedCount: Int,
+    val totalCount: Int,
+    val progressPercent: Float,
+    val activeTimer: ExerciseLogItem?,
+    val selectedExerciseItem: ExerciseLogItem?
+)
 

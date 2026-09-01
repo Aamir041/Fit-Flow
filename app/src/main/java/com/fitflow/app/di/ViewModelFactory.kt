@@ -24,7 +24,8 @@ class ViewModelFactory(
         return when {
             modelClass.isAssignableFrom(SettingsViewModel::class.java) -> {
                 val prefs = themePreferences ?: throw IllegalArgumentException("ThemePreferences required for SettingsViewModel")
-                SettingsViewModel(prefs) as T
+                val repo = repository ?: throw IllegalArgumentException("Repository required for SettingsViewModel")
+                SettingsViewModel(prefs, repo) as T
             }
             modelClass.isAssignableFrom(HomeViewModel::class.java) -> {
                 val repo = repository ?: throw IllegalArgumentException("Repository required for HomeViewModel")

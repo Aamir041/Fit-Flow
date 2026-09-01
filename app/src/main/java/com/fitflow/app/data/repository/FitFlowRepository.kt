@@ -6,8 +6,10 @@ import com.fitflow.app.data.local.entity.ExerciseEntity
 import com.fitflow.app.data.local.entity.FoodLogEntity
 import com.fitflow.app.data.local.entity.TemplateEntity
 import com.fitflow.app.data.local.entity.TemplateExerciseEntity
+import com.fitflow.app.data.local.entity.WeightLogEntity
 import com.fitflow.app.data.local.entity.WorkoutLogEntity
 import com.fitflow.app.data.local.model.FoodLogExport
+import com.fitflow.app.data.local.model.WeightLogExport
 import com.fitflow.app.data.local.relation.DayWithTemplate
 import com.fitflow.app.data.local.relation.TemplateWithExercises
 import com.fitflow.app.data.local.relation.WorkoutLogWithExercise
@@ -19,6 +21,7 @@ import com.fitflow.app.data.local.model.HistoryLogExport
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.withContext
+import kotlin.math.roundToInt
 
 interface FitFlowRepository {
     // Exercises
@@ -93,6 +96,16 @@ interface FitFlowRepository {
     suspend fun deleteFoodLogById(id: Long)
     suspend fun deleteAllFoodLogs()
 
+    // Weight Logs
+    fun getAllWeightLogs(): Flow<List<WeightLogEntity>>
+    suspend fun getAllWeightLogsOnce(): List<WeightLogEntity>
+    fun getWeightLogForDate(date: String): Flow<WeightLogEntity?>
+    suspend fun getWeightLogForDateOnce(date: String): WeightLogEntity?
+    fun getLatestWeightLog(): Flow<WeightLogEntity?>
+    suspend fun saveWeightLog(date: String, weightKg: Double): Long
+    suspend fun deleteWeightLogByDate(date: String)
+    suspend fun deleteAllWeightLogs()
+
     // Initializer
     suspend fun ensureSeeded()
 }
@@ -106,6 +119,7 @@ class FitFlowRepositoryImpl(
     private val dayAssignmentDao = database.dayAssignmentDao()
     private val workoutLogDao = database.workoutLogDao()
     private val foodLogDao = database.foodLogDao()
+    private val weightLogDao = database.weightLogDao()
 
     override suspend fun ensureSeeded() = withContext(Dispatchers.IO) {
         FitFlowDatabase.populateDatabase(database)
@@ -428,12 +442,22 @@ class FitFlowRepositoryImpl(
             )
         }
 
+        val allWeightLogs = weightLogDao.getAllWeightLogsOnce()
+        val exportWeightLogs = allWeightLogs.map { weightLog ->
+            WeightLogExport(
+                date = weightLog.date,
+                weightKg = weightLog.weightKg,
+                timestamp = weightLog.timestamp
+            )
+        }
+
         val bundle = HistoryBundleExportJson(
-            version = 2,
+            version = 3,
             app = "FitFlow",
             exportedAt = System.currentTimeMillis(),
             logs = exportLogs,
-            foodLogs = exportFoodLogs
+            foodLogs = exportFoodLogs,
+            weightLogs = exportWeightLogs
         )
         bundle.toJsonString()
     }
@@ -443,8 +467,8 @@ class FitFlowRepositoryImpl(
     override suspend fun importHistoryFromJson(jsonString: String): Result<Int> = withContext(Dispatchers.IO) {
         try {
             val bundle = HistoryBundleExportJson.fromJsonString(jsonString)
-            if (bundle.logs.isEmpty() && bundle.foodLogs.isEmpty()) {
-                return@withContext Result.failure(IllegalArgumentException("No history or food logs found in JSON file"))
+            if (bundle.logs.isEmpty() && bundle.foodLogs.isEmpty() && bundle.weightLogs.isEmpty()) {
+                return@withContext Result.failure(IllegalArgumentException("No history, food logs, or weight logs found in JSON file"))
             }
 
             var importedCount = 0
@@ -502,6 +526,20 @@ class FitFlowRepositoryImpl(
                 importedCount++
             }
 
+            // Import Weight Logs
+            for (exportWeight in bundle.weightLogs) {
+                if (exportWeight.date.isBlank() || exportWeight.weightKg <= 0.0) continue
+
+                val weightEntity = WeightLogEntity(
+                    date = exportWeight.date,
+                    weightKg = exportWeight.weightKg,
+                    timestamp = exportWeight.timestamp
+                )
+
+                weightLogDao.insertOrUpdateWeightLog(weightEntity)
+                importedCount++
+            }
+
             Result.success(importedCount)
         } catch (e: Exception) {
             Result.failure(e)
@@ -511,6 +549,7 @@ class FitFlowRepositoryImpl(
     override suspend fun clearAllHistory() = withContext(Dispatchers.IO) {
         workoutLogDao.deleteAllLogs()
         foodLogDao.deleteAllFoodLogs()
+        weightLogDao.deleteAllWeightLogs()
     }
 
     // Food Logs
@@ -548,5 +587,41 @@ class FitFlowRepositoryImpl(
 
     override suspend fun deleteAllFoodLogs() = withContext(Dispatchers.IO) {
         foodLogDao.deleteAllFoodLogs()
+    }
+
+    // Weight Logs
+    override fun getAllWeightLogs(): Flow<List<WeightLogEntity>> =
+        weightLogDao.getAllWeightLogs()
+
+    override suspend fun getAllWeightLogsOnce(): List<WeightLogEntity> = withContext(Dispatchers.IO) {
+        weightLogDao.getAllWeightLogsOnce()
+    }
+
+    override fun getWeightLogForDate(date: String): Flow<WeightLogEntity?> =
+        weightLogDao.getWeightLogByDate(date)
+
+    override suspend fun getWeightLogForDateOnce(date: String): WeightLogEntity? = withContext(Dispatchers.IO) {
+        weightLogDao.getWeightLogByDateOnce(date)
+    }
+
+    override fun getLatestWeightLog(): Flow<WeightLogEntity?> =
+        weightLogDao.getLatestWeightLog()
+
+    override suspend fun saveWeightLog(date: String, weightKg: Double): Long = withContext(Dispatchers.IO) {
+        val roundedWeight = ((weightKg * 10.0).roundToInt()) / 10.0
+        val entity = WeightLogEntity(
+            date = date.trim(),
+            weightKg = roundedWeight,
+            timestamp = System.currentTimeMillis()
+        )
+        weightLogDao.insertOrUpdateWeightLog(entity)
+    }
+
+    override suspend fun deleteWeightLogByDate(date: String) = withContext(Dispatchers.IO) {
+        weightLogDao.deleteWeightLogByDate(date.trim())
+    }
+
+    override suspend fun deleteAllWeightLogs() = withContext(Dispatchers.IO) {
+        weightLogDao.deleteAllWeightLogs()
     }
 }

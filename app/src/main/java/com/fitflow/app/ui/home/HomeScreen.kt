@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -21,7 +22,14 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Celebration
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.FitnessCenter
+import androidx.compose.material.icons.filled.MonitorWeight
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.foundation.clickable
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
@@ -32,6 +40,9 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -88,6 +99,12 @@ fun HomeScreen(
         onCloseSetLogger = {
             viewModel.closeSetLogger()
         },
+        onSaveWeight = { weightKg ->
+            viewModel.saveTodayWeight(weightKg)
+        },
+        onDeleteWeight = {
+            viewModel.deleteTodayWeight()
+        },
         onNavigateToSchedule = onNavigateToSchedule,
         onNavigateToSettings = onNavigateToSettings,
         modifier = modifier
@@ -107,6 +124,8 @@ fun HomeScreenContent(
     onOpenTimer: (ExerciseLogItem) -> Unit,
     onCloseTimer: () -> Unit,
     onCloseSetLogger: () -> Unit,
+    onSaveWeight: (Double) -> Unit = {},
+    onDeleteWeight: () -> Unit = {},
     onNavigateToSchedule: () -> Unit,
     onNavigateToSettings: (() -> Unit)? = null,
     modifier: Modifier = Modifier
@@ -118,6 +137,8 @@ fun HomeScreenContent(
         targetValue = uiState.progressPercent,
         label = "WorkoutProgressBar"
     )
+
+    var showWeightDialog by remember { mutableStateOf(false) }
 
     Scaffold(
         topBar = {
@@ -140,22 +161,32 @@ fun HomeScreenContent(
                 CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
             }
         } else if (uiState.assignedTemplate == null || uiState.exercises.isEmpty()) {
-            // Empty state when no template is assigned for today
-            Column(
+            // Rest Day / No template assigned for today
+            LazyColumn(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(innerPadding)
-                    .padding(20.dp),
-                verticalArrangement = Arrangement.Center,
-                horizontalAlignment = Alignment.CenterHorizontally
+                    .padding(innerPadding),
+                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                EmptyStateCard(
-                    title = "Rest Day or No Template Assigned",
-                    description = "There is no workout template attached to ${uiState.dayOfWeek.name.lowercase().replaceFirstChar { it.uppercase() }}. Tap below to assign a template or customize your weekly routine.",
-                    icon = Icons.Default.CalendarMonth,
-                    actionButtonText = "Assign Template to Today",
-                    onActionClick = onNavigateToSchedule
-                )
+                // Today's Weight Card on Rest Day
+                item {
+                    DailyWeightCard(
+                        todayWeight = uiState.todayWeightLog,
+                        lastWeight = uiState.lastRecordedWeight,
+                        onLogWeightClick = { showWeightDialog = true }
+                    )
+                }
+
+                item {
+                    EmptyStateCard(
+                        title = "Rest Day or No Template Assigned",
+                        description = "There is no workout template attached to ${uiState.dayOfWeek.name.lowercase().replaceFirstChar { it.uppercase() }}. Tap below to assign a template or customize your weekly routine.",
+                        icon = Icons.Default.CalendarMonth,
+                        actionButtonText = "Assign Template to Today",
+                        onActionClick = onNavigateToSchedule
+                    )
+                }
             }
         } else {
             // Template Active
@@ -166,6 +197,15 @@ fun HomeScreenContent(
                 contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
+                // Today's Body Weight Quick Entry Card
+                item {
+                    DailyWeightCard(
+                        todayWeight = uiState.todayWeightLog,
+                        lastWeight = uiState.lastRecordedWeight,
+                        onLogWeightClick = { showWeightDialog = true }
+                    )
+                }
+
                 // Workout Overview Header Card
                 item {
                     WorkoutOverviewCard(
@@ -194,6 +234,22 @@ fun HomeScreenContent(
                     Spacer(modifier = Modifier.height(24.dp))
                 }
             }
+        }
+
+        // Daily Weight Logger Dialog
+        if (showWeightDialog) {
+            com.fitflow.app.ui.components.LogWeightDialog(
+                initialDate = uiState.currentDate,
+                currentWeight = uiState.lastRecordedWeight,
+                existingRecordedWeight = uiState.todayWeightLog,
+                onSave = { _, weightKg ->
+                    onSaveWeight(weightKg)
+                },
+                onDelete = {
+                    onDeleteWeight()
+                },
+                onDismiss = { showWeightDialog = false }
+            )
         }
 
         // Set Logger Dialog
@@ -335,6 +391,123 @@ fun WorkoutOverviewCard(
                 trackColor = MaterialTheme.colorScheme.surfaceVariant,
                 strokeCap = StrokeCap.Round
             )
+        }
+    }
+}
+
+@Composable
+fun DailyWeightCard(
+    todayWeight: Double?,
+    lastWeight: Double?,
+    onLogWeightClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val isLoggedToday = todayWeight != null
+
+    Surface(
+        modifier = modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(16.dp))
+            .border(
+                width = 1.dp,
+                color = if (isLoggedToday) MaterialTheme.colorScheme.primary.copy(alpha = 0.5f) else MaterialTheme.colorScheme.outlineVariant,
+                shape = RoundedCornerShape(16.dp)
+            )
+            .clickable { onLogWeightClick() },
+        color = MaterialTheme.colorScheme.surface,
+        shape = RoundedCornerShape(16.dp)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(14.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.weight(1f)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(42.dp)
+                        .clip(CircleShape)
+                        .background(
+                            if (isLoggedToday) MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
+                            else MaterialTheme.colorScheme.surfaceVariant
+                        ),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.MonitorWeight,
+                        contentDescription = null,
+                        tint = if (isLoggedToday) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(22.dp)
+                    )
+                }
+
+                Spacer(modifier = Modifier.width(12.dp))
+
+                Column {
+                    Text(
+                        text = "BODY WEIGHT",
+                        style = MaterialTheme.typography.labelSmall,
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary,
+                        letterSpacing = 1.sp
+                    )
+
+                    if (isLoggedToday) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(
+                                text = "$todayWeight kg",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(
+                                text = "• Today",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.primary,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                        }
+                    } else {
+                        Text(
+                            text = if (lastWeight != null) "Last: $lastWeight kg" else "Not logged today",
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+            }
+
+            if (isLoggedToday) {
+                OutlinedButton(
+                    onClick = onLogWeightClick,
+                    shape = RoundedCornerShape(10.dp),
+                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp)
+                ) {
+                    Icon(Icons.Default.Edit, contentDescription = null, modifier = Modifier.size(14.dp))
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(text = "Edit", style = MaterialTheme.typography.labelSmall)
+                }
+            } else {
+                Button(
+                    onClick = onLogWeightClick,
+                    shape = RoundedCornerShape(10.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.primary,
+                        contentColor = MaterialTheme.colorScheme.onPrimary
+                    ),
+                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp)
+                ) {
+                    Text(text = "Log Weight", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
+                }
+            }
         }
     }
 }
