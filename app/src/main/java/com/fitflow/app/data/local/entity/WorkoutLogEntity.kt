@@ -38,6 +38,7 @@ data class WorkoutLogEntity(
     val actualWeight: Double = 0.0,
     val actualDurationSeconds: Int = 0,
     val isCompleted: Boolean = false,
+    val setsDataJson: String = "",
     val timestamp: Long = System.currentTimeMillis()
 )
 

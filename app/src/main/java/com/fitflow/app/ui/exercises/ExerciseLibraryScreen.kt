@@ -288,10 +288,6 @@ fun ExerciseCatalogItemCard(
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSurface
                     )
-                    if (exercise.isSprint) {
-                        Spacer(modifier = Modifier.width(6.dp))
-                        SprintBadge(durationSeconds = exercise.defaultDurationSeconds)
-                    }
                     if (exercise.isCustom) {
                         Spacer(modifier = Modifier.width(6.dp))
                         Box(
@@ -313,9 +309,14 @@ fun ExerciseCatalogItemCard(
 
                 Spacer(modifier = Modifier.height(6.dp))
 
-                Row(verticalAlignment = Alignment.CenterVertically) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
                     CategoryBadge(category = exercise.category)
-                    Spacer(modifier = Modifier.width(8.dp))
+                    if (exercise.isSprint) {
+                        SprintBadge(durationSeconds = exercise.defaultDurationSeconds)
+                    }
                     Text(
                         text = if (exercise.isSprint) {
                             "Duration: ${exercise.defaultDurationSeconds}s"

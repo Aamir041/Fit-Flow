@@ -271,22 +271,21 @@ fun ExercisePickerBottomSheet(
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
                             Column(modifier = Modifier.weight(1f)) {
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Text(
-                                        text = exercise.name,
-                                        style = MaterialTheme.typography.bodyLarge,
-                                        fontWeight = FontWeight.SemiBold,
-                                        color = if (isAlreadyAdded) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface
-                                    )
+                                Text(
+                                    text = exercise.name,
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = if (isAlreadyAdded) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface
+                                )
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    CategoryBadge(category = exercise.category)
                                     if (exercise.isSprint) {
-                                        Spacer(modifier = Modifier.width(6.dp))
                                         SprintBadge(durationSeconds = exercise.defaultDurationSeconds)
                                     }
-                                }
-                                Spacer(modifier = Modifier.height(4.dp))
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    CategoryBadge(category = exercise.category)
-                                    Spacer(modifier = Modifier.width(8.dp))
                                     Text(
                                         text = if (exercise.isSprint) {
                                             "Duration: ${exercise.defaultDurationSeconds}s"

@@ -17,6 +17,7 @@ data class HistoryLogExport(
     val actualDurationSeconds: Int = 0,
     val isCompleted: Boolean = true,
     val isSprint: Boolean = false,
+    val setsDataJson: String = "",
     val timestamp: Long = System.currentTimeMillis()
 ) {
     fun toJson(): JSONObject {
@@ -30,6 +31,7 @@ data class HistoryLogExport(
             put("actualDurationSeconds", actualDurationSeconds)
             put("isCompleted", isCompleted)
             put("isSprint", isSprint)
+            put("setsDataJson", setsDataJson)
             put("timestamp", timestamp)
         }
     }
@@ -46,6 +48,7 @@ data class HistoryLogExport(
                 actualDurationSeconds = json.optInt("actualDurationSeconds", 0),
                 isCompleted = json.optBoolean("isCompleted", true),
                 isSprint = json.optBoolean("isSprint", false),
+                setsDataJson = json.optString("setsDataJson", ""),
                 timestamp = json.optLong("timestamp", System.currentTimeMillis())
             )
         }

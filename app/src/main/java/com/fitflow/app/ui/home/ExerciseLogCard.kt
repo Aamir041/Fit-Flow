@@ -18,17 +18,16 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.ChevronRight
+import androidx.compose.material.icons.filled.EditNote
 import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.Divider
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -39,7 +38,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.fitflow.app.ui.components.CategoryBadge
-import com.fitflow.app.ui.components.NumberStepper
 import com.fitflow.app.ui.components.SprintBadge
 import com.fitflow.app.ui.theme.CyanAccent
 import com.fitflow.app.ui.theme.EmeraldLight
@@ -48,11 +46,11 @@ import com.fitflow.app.ui.theme.EmeraldPrimary
 @Composable
 fun ExerciseLogCard(
     item: ExerciseLogItem,
-    onValuesChanged: (sets: Int, reps: Int, weight: Double) -> Unit,
-    onDurationChanged: (Int) -> Unit = {},
+    onCardClick: () -> Unit,
     onToggleCompleted: () -> Unit,
     onOpenTimer: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onToggleSet: ((setNumber: Int) -> Unit)? = null
 ) {
     val borderColor by animateColorAsState(
         targetValue = if (item.isCompleted) EmeraldPrimary else MaterialTheme.colorScheme.outlineVariant,
@@ -71,13 +69,14 @@ fun ExerciseLogCard(
                 width = if (item.isCompleted) 1.5.dp else 1.dp,
                 color = borderColor,
                 shape = RoundedCornerShape(18.dp)
-            ),
+            )
+            .clickable { onCardClick() },
         shape = RoundedCornerShape(18.dp),
         colors = CardDefaults.cardColors(containerColor = cardBackground),
         elevation = CardDefaults.cardElevation(defaultElevation = if (item.isCompleted) 1.dp else 3.dp)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
-            // Header Row: Category Badge + Rest Timer + Checkmark status
+            // Header Row: Category Badge + Sprint / Rest Timer + Completion Status Pill
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
@@ -116,24 +115,44 @@ fun ExerciseLogCard(
                     }
                 }
 
-                // Check circle indicator
+                // Completion status pill / Checkmark indicator
                 Box(
                     modifier = Modifier
-                        .size(28.dp)
-                        .clip(CircleShape)
+                        .clip(RoundedCornerShape(8.dp))
                         .background(
-                            if (item.isCompleted) EmeraldPrimary else MaterialTheme.colorScheme.surfaceVariant
+                            if (item.isCompleted) EmeraldPrimary.copy(alpha = 0.18f)
+                            else MaterialTheme.colorScheme.surfaceVariant
                         )
-                        .clickable { onToggleCompleted() },
+                        .clickable { onToggleCompleted() }
+                        .padding(horizontal = 8.dp, vertical = 4.dp),
                     contentAlignment = Alignment.Center
                 ) {
-                    if (item.isCompleted) {
-                        Icon(
-                            imageVector = Icons.Default.Check,
-                            contentDescription = "Completed",
-                            tint = MaterialTheme.colorScheme.background,
-                            modifier = Modifier.size(18.dp)
-                        )
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        if (item.isCompleted) {
+                            Icon(
+                                imageVector = Icons.Default.Check,
+                                contentDescription = "All completed",
+                                tint = EmeraldPrimary,
+                                modifier = Modifier.size(14.dp)
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(
+                                text = "All Done",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = EmeraldPrimary,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 11.sp
+                            )
+                        } else {
+                            val unitLabel = if (item.isSprint) "Rounds" else "Sets"
+                            Text(
+                                text = "${item.completedSetsCount}/${item.totalSetsCount} $unitLabel",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = if (item.completedSetsCount > 0) EmeraldLight else MaterialTheme.colorScheme.onSurfaceVariant,
+                                fontWeight = FontWeight.SemiBold,
+                                fontSize = 11.sp
+                            )
+                        }
                     }
                 }
             }
@@ -141,102 +160,67 @@ fun ExerciseLogCard(
             Spacer(modifier = Modifier.height(10.dp))
 
             // Exercise Title & Target
-            Text(
-                text = item.name,
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurface
-            )
-            Text(
-                text = if (item.isSprint) {
-                    "Target: ${item.targetDurationSeconds}s sprint"
-                } else {
-                    "Target: ${item.targetSets} sets × ${item.targetReps} reps"
-                },
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-
-            Spacer(modifier = Modifier.height(14.dp))
-            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
-            Spacer(modifier = Modifier.height(14.dp))
-
-            // Inputs: Duration (for sprint) OR Sets | Reps | Weight (for standard)
-            if (item.isSprint) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.Center,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    NumberStepper(
-                        label = "Duration",
-                        value = item.actualDurationSeconds,
-                        onValueChange = { newDuration ->
-                            onDurationChanged(newDuration)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = item.name,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Text(
+                        text = if (item.isSprint) {
+                            "Target: ${item.targetSets} rounds × ${item.targetDurationSeconds}s"
+                        } else {
+                            "Target: ${item.targetSets} sets × ${item.targetReps} reps"
                         },
-                        minValue = 5,
-                        maxValue = 600,
-                        step = 5,
-                        suffix = "s",
-                        modifier = Modifier.weight(1f)
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
-            } else {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(16.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    NumberStepper(
-                        label = "Sets",
-                        value = item.actualSets,
-                        onValueChange = { newSets ->
-                            onValuesChanged(newSets, item.actualReps, item.actualWeight)
-                        },
-                        minValue = 1,
-                        maxValue = 20,
-                        modifier = Modifier.weight(1f)
-                    )
 
-                    NumberStepper(
-                        label = "Reps",
-                        value = item.actualReps,
-                        onValueChange = { newReps ->
-                            onValuesChanged(item.actualSets, newReps, item.actualWeight)
-                        },
-                        minValue = 1,
-                        maxValue = 100,
-                        modifier = Modifier.weight(1f)
-                    )
-                }
+                Icon(
+                    imageVector = Icons.Default.ChevronRight,
+                    contentDescription = "Edit sets",
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                    modifier = Modifier.size(20.dp)
+                )
             }
 
-            Spacer(modifier = Modifier.height(14.dp))
+            Spacer(modifier = Modifier.height(12.dp))
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
+            Spacer(modifier = Modifier.height(10.dp))
 
-            // Complete Button
-            Button(
-                onClick = onToggleCompleted,
+            // Tap Card Action Prompt
+            Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(42.dp),
-                shape = RoundedCornerShape(12.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = if (item.isCompleted) EmeraldPrimary.copy(alpha = 0.18f) else EmeraldPrimary,
-                    contentColor = if (item.isCompleted) EmeraldLight else MaterialTheme.colorScheme.background
-                )
+                    .clip(RoundedCornerShape(10.dp))
+                    .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f))
+                    .padding(horizontal = 10.dp, vertical = 7.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Center
             ) {
                 Icon(
-                    imageVector = Icons.Default.Check,
+                    imageVector = Icons.Default.EditNote,
                     contentDescription = null,
-                    modifier = Modifier.size(18.dp)
+                    tint = EmeraldPrimary,
+                    modifier = Modifier.size(16.dp)
                 )
                 Spacer(modifier = Modifier.width(6.dp))
                 Text(
-                    text = if (item.isCompleted) "Completed (Tap to undo)" else "Log & Mark Complete",
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 13.sp
+                    text = if (item.isSprint) "Tap to log sprint rounds & duration" else "Tap to log sets, reps & weight",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = EmeraldPrimary,
+                    fontWeight = FontWeight.SemiBold,
+                    fontSize = 11.sp
                 )
             }
         }
     }
 }
+

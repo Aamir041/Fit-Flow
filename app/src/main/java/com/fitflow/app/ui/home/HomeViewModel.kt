@@ -3,6 +3,7 @@ package com.fitflow.app.ui.home
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.fitflow.app.data.local.entity.WorkoutLogEntity
+import com.fitflow.app.data.local.model.WorkoutSetRecord
 import com.fitflow.app.data.repository.FitFlowRepository
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -11,7 +12,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
-import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -29,6 +29,8 @@ class HomeViewModel(
     private val _activeRestTimer = MutableStateFlow<ExerciseLogItem?>(null)
     val activeRestTimer: StateFlow<ExerciseLogItem?> = _activeRestTimer.asStateFlow()
 
+    private val _selectedExerciseForLoggingId = MutableStateFlow<Long?>(null)
+
     // Map of local in-memory adjustments before or while logging (exerciseId -> LogDraft)
     private val _inMemoryAdjustments = MutableStateFlow<Map<Long, WorkoutLogEntity>>(emptyMap())
 
@@ -40,8 +42,9 @@ class HomeViewModel(
             repository.getAssignmentForDay(dayOfWeekValue),
             repository.getLogsForDate(dateString),
             _activeRestTimer,
-            _inMemoryAdjustments
-        ) { dayWithTemplate, logsWithExercise, activeTimer, adjustments ->
+            _inMemoryAdjustments,
+            _selectedExerciseForLoggingId
+        ) { dayWithTemplate, logsWithExercise, activeTimer, adjustments, selectedExerciseId ->
             val templateId = dayWithTemplate?.dayAssignment?.templateId
             val template = if (templateId != null) {
                 repository.getTemplateWithExercisesOnce(templateId)
@@ -55,7 +58,7 @@ class HomeViewModel(
                 val exId = item.exercise.id
                 val existingLog = logsMap[exId]?.log ?: adjustments[exId]
 
-                val actualSets = existingLog?.actualSets ?: item.templateExercise.targetSets
+                val actualSetsCount = existingLog?.actualSets ?: item.templateExercise.targetSets
                 val actualReps = existingLog?.actualReps ?: item.templateExercise.targetReps
                 val actualWeight = existingLog?.actualWeight ?: 0.0
                 val actualDuration = if (existingLog != null && existingLog.actualDurationSeconds > 0) {
@@ -67,6 +70,34 @@ class HomeViewModel(
                 }
                 val isCompleted = existingLog?.isCompleted ?: false
 
+                // Parse or construct sets
+                val parsedSets = if (existingLog != null && existingLog.setsDataJson.isNotBlank()) {
+                    WorkoutSetRecord.parseSetsFromJson(existingLog.setsDataJson).map { record ->
+                        WorkoutSetUiModel(
+                            setNumber = record.setNumber,
+                            reps = record.reps,
+                            weight = record.weight,
+                            isCompleted = record.isCompleted
+                        )
+                    }
+                } else {
+                    // Generate default sets matching targetSets (or target rounds)
+                    val setsCount = if (actualSetsCount > 0) actualSetsCount else item.templateExercise.targetSets
+                    val defaultRepsVal = if (item.exercise.isSprint) {
+                        if (actualDuration > 0) actualDuration else item.templateExercise.targetDurationSeconds
+                    } else {
+                        actualReps
+                    }
+                    (1..setsCount).map { setIndex ->
+                        WorkoutSetUiModel(
+                            setNumber = setIndex,
+                            reps = defaultRepsVal,
+                            weight = if (item.exercise.isSprint) 0.0 else actualWeight,
+                            isCompleted = isCompleted
+                        )
+                    }
+                }
+
                 ExerciseLogItem(
                     templateExerciseId = item.templateExercise.id,
                     exerciseId = exId,
@@ -75,19 +106,22 @@ class HomeViewModel(
                     targetSets = item.templateExercise.targetSets,
                     targetReps = item.templateExercise.targetReps,
                     restTimeSeconds = item.templateExercise.restTimeSeconds,
-                    actualSets = actualSets,
+                    actualSets = actualSetsCount,
                     actualReps = actualReps,
                     actualWeight = actualWeight,
                     isCompleted = isCompleted,
                     isSprint = item.exercise.isSprint,
                     targetDurationSeconds = item.templateExercise.targetDurationSeconds,
-                    actualDurationSeconds = actualDuration
+                    actualDurationSeconds = actualDuration,
+                    sets = parsedSets
                 )
             } ?: emptyList()
 
             val completedCount = exerciseItems.count { it.isCompleted }
             val totalCount = exerciseItems.size
             val progressPercent = if (totalCount > 0) completedCount.toFloat() / totalCount.toFloat() else 0f
+
+            val selectedExerciseItem = exerciseItems.find { it.exerciseId == selectedExerciseId }
 
             HomeUiState(
                 currentDate = date,
@@ -98,7 +132,8 @@ class HomeViewModel(
                 totalCount = totalCount,
                 progressPercent = progressPercent,
                 isLoading = false,
-                activeRestTimer = activeTimer
+                activeRestTimer = activeTimer,
+                selectedExerciseForLogging = selectedExerciseItem
             )
         }
     }.stateIn(
@@ -106,6 +141,175 @@ class HomeViewModel(
         started = SharingStarted.WhileSubscribed(5000),
         initialValue = HomeUiState()
     )
+
+    fun openSetLogger(item: ExerciseLogItem) {
+        _selectedExerciseForLoggingId.value = item.exerciseId
+    }
+
+    fun closeSetLogger() {
+        _selectedExerciseForLoggingId.value = null
+    }
+
+    fun toggleSetCompletion(exerciseId: Long, setNumber: Int) {
+        val currentItem = uiState.value.exercises.find { it.exerciseId == exerciseId } ?: return
+        val currentSets = currentItem.sets.toMutableList()
+        val setIndex = currentSets.indexOfFirst { it.setNumber == setNumber }
+        if (setIndex == -1) return
+
+        val targetSet = currentSets[setIndex]
+        val willBeCompleted = !targetSet.isCompleted
+        currentSets[setIndex] = targetSet.copy(isCompleted = willBeCompleted)
+
+        val setRecords = currentSets.map {
+            WorkoutSetRecord(
+                setNumber = it.setNumber,
+                reps = it.reps,
+                weight = it.weight,
+                isCompleted = it.isCompleted
+            )
+        }
+
+        val dateString = _selectedDate.value.format(DateTimeFormatter.ISO_LOCAL_DATE)
+        val templateId = uiState.value.assignedTemplate?.template?.id
+
+        viewModelScope.launch {
+            val updatedLog = repository.saveExerciseSets(
+                date = dateString,
+                templateId = templateId,
+                exerciseId = exerciseId,
+                sets = setRecords,
+                durationSeconds = currentItem.actualDurationSeconds
+            )
+
+            _inMemoryAdjustments.update { current ->
+                current + (exerciseId to updatedLog)
+            }
+
+            // If a set was just marked complete, trigger rest timer suggestion if restTime > 0
+            if (willBeCompleted && currentItem.restTimeSeconds > 0) {
+                _activeRestTimer.value = currentItem
+            }
+        }
+    }
+
+    fun updateSetValues(exerciseId: Long, setNumber: Int, reps: Int, weight: Double) {
+        val currentItem = uiState.value.exercises.find { it.exerciseId == exerciseId } ?: return
+        val currentSets = currentItem.sets.toMutableList()
+        val setIndex = currentSets.indexOfFirst { it.setNumber == setNumber }
+        if (setIndex == -1) return
+
+        currentSets[setIndex] = currentSets[setIndex].copy(
+            reps = reps.coerceAtLeast(1),
+            weight = weight.coerceAtLeast(0.0)
+        )
+
+        val setRecords = currentSets.map {
+            WorkoutSetRecord(
+                setNumber = it.setNumber,
+                reps = it.reps,
+                weight = it.weight,
+                isCompleted = it.isCompleted
+            )
+        }
+
+        val dateString = _selectedDate.value.format(DateTimeFormatter.ISO_LOCAL_DATE)
+        val templateId = uiState.value.assignedTemplate?.template?.id
+
+        viewModelScope.launch {
+            val updatedLog = repository.saveExerciseSets(
+                date = dateString,
+                templateId = templateId,
+                exerciseId = exerciseId,
+                sets = setRecords,
+                durationSeconds = currentItem.actualDurationSeconds
+            )
+
+            _inMemoryAdjustments.update { current ->
+                current + (exerciseId to updatedLog)
+            }
+        }
+    }
+
+    fun addSet(exerciseId: Long) {
+        val currentItem = uiState.value.exercises.find { it.exerciseId == exerciseId } ?: return
+        val currentSets = currentItem.sets.toMutableList()
+        val nextNumber = (currentSets.maxOfOrNull { it.setNumber } ?: 0) + 1
+        val lastSet = currentSets.lastOrNull()
+        val defaultReps = lastSet?.reps ?: currentItem.targetReps
+        val defaultWeight = lastSet?.weight ?: currentItem.actualWeight
+
+        currentSets.add(
+            WorkoutSetUiModel(
+                setNumber = nextNumber,
+                reps = defaultReps,
+                weight = defaultWeight,
+                isCompleted = false
+            )
+        )
+
+        val setRecords = currentSets.map {
+            WorkoutSetRecord(
+                setNumber = it.setNumber,
+                reps = it.reps,
+                weight = it.weight,
+                isCompleted = it.isCompleted
+            )
+        }
+
+        val dateString = _selectedDate.value.format(DateTimeFormatter.ISO_LOCAL_DATE)
+        val templateId = uiState.value.assignedTemplate?.template?.id
+
+        viewModelScope.launch {
+            val updatedLog = repository.saveExerciseSets(
+                date = dateString,
+                templateId = templateId,
+                exerciseId = exerciseId,
+                sets = setRecords,
+                durationSeconds = currentItem.actualDurationSeconds
+            )
+
+            _inMemoryAdjustments.update { current ->
+                current + (exerciseId to updatedLog)
+            }
+        }
+    }
+
+    fun removeSet(exerciseId: Long, setNumber: Int) {
+        val currentItem = uiState.value.exercises.find { it.exerciseId == exerciseId } ?: return
+        val currentSets = currentItem.sets.filter { it.setNumber != setNumber }
+        if (currentSets.isEmpty()) return
+
+        // Re-index remaining sets so numbers are consecutive 1..N
+        val reindexed = currentSets.mapIndexed { index, item ->
+            item.copy(setNumber = index + 1)
+        }
+
+        val setRecords = reindexed.map {
+            WorkoutSetRecord(
+                setNumber = it.setNumber,
+                reps = it.reps,
+                weight = it.weight,
+                isCompleted = it.isCompleted
+            )
+        }
+
+        val dateString = _selectedDate.value.format(DateTimeFormatter.ISO_LOCAL_DATE)
+        val templateId = uiState.value.assignedTemplate?.template?.id
+
+        viewModelScope.launch {
+            val updatedLog = repository.saveExerciseSets(
+                date = dateString,
+                templateId = templateId,
+                exerciseId = exerciseId,
+                sets = setRecords,
+                durationSeconds = currentItem.actualDurationSeconds
+            )
+
+            _inMemoryAdjustments.update { current ->
+                current + (exerciseId to updatedLog)
+            }
+        }
+    }
 
     fun updateExerciseValues(exerciseId: Long, sets: Int, reps: Int, weight: Double) {
         val dateString = _selectedDate.value.format(DateTimeFormatter.ISO_LOCAL_DATE)
@@ -162,15 +366,28 @@ class HomeViewModel(
             val wasCompleted = item.isCompleted
             val willBeCompleted = !wasCompleted
 
-            repository.toggleExerciseCompletion(
+            // Mark all sets completed or uncompleted accordingly
+            val updatedSets = item.sets.map { it.copy(isCompleted = willBeCompleted) }
+            val setRecords = updatedSets.map {
+                WorkoutSetRecord(
+                    setNumber = it.setNumber,
+                    reps = it.reps,
+                    weight = it.weight,
+                    isCompleted = it.isCompleted
+                )
+            }
+
+            val savedLog = repository.saveExerciseSets(
                 date = dateString,
                 templateId = templateId,
                 exerciseId = item.exerciseId,
-                sets = item.actualSets,
-                reps = item.actualReps,
-                weight = item.actualWeight,
+                sets = setRecords,
                 durationSeconds = item.actualDurationSeconds
             )
+
+            _inMemoryAdjustments.update { current ->
+                current + (item.exerciseId to savedLog)
+            }
 
             // If user just marked completed, trigger rest timer suggestion if rest time > 0
             if (willBeCompleted && item.restTimeSeconds > 0) {
@@ -191,3 +408,4 @@ class HomeViewModel(
         _selectedDate.value = date
     }
 }
+

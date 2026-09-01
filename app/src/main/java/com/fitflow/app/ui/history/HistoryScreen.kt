@@ -569,60 +569,130 @@ fun DayWorkoutDetailsDialog(
 
                         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                             logs.forEach { item ->
+                                val setsList = if (item.log.setsDataJson.isNotBlank()) {
+                                    com.fitflow.app.data.local.model.WorkoutSetRecord.parseSetsFromJson(item.log.setsDataJson)
+                                } else {
+                                    emptyList()
+                                }
+
                                 val weightFormatted = if (item.log.actualWeight % 1.0 == 0.0) {
                                     "${item.log.actualWeight.toInt()}"
                                 } else {
                                     "${item.log.actualWeight}"
                                 }
 
-                                Row(
+                                Column(
                                     modifier = Modifier
                                         .fillMaxWidth()
                                         .clip(RoundedCornerShape(12.dp))
                                         .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
                                         .border(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f), RoundedCornerShape(12.dp))
-                                        .padding(12.dp),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.SpaceBetween
+                                        .padding(12.dp)
                                 ) {
-                                    Column(modifier = Modifier.weight(1f)) {
-                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.SpaceBetween
+                                    ) {
+                                        Column(modifier = Modifier.weight(1f)) {
                                             Text(
                                                 text = item.exercise.name,
                                                 style = MaterialTheme.typography.bodyMedium,
                                                 fontWeight = FontWeight.Bold,
                                                 color = MaterialTheme.colorScheme.onSurface
                                             )
-                                            if (item.exercise.isSprint) {
-                                                Spacer(modifier = Modifier.width(6.dp))
-                                                SprintBadge(durationSeconds = item.log.actualDurationSeconds)
+                                            Spacer(modifier = Modifier.height(4.dp))
+                                            Row(
+                                                verticalAlignment = Alignment.CenterVertically,
+                                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                            ) {
+                                                CategoryBadge(category = item.exercise.category)
+                                                if (item.exercise.isSprint) {
+                                                    SprintBadge(durationSeconds = item.log.actualDurationSeconds)
+                                                }
                                             }
                                         }
-                                        Spacer(modifier = Modifier.height(4.dp))
-                                        CategoryBadge(category = item.exercise.category)
+
+                                        Column(horizontalAlignment = Alignment.End) {
+                                            if (item.exercise.isSprint) {
+                                                Text(
+                                                    text = "${item.log.actualDurationSeconds}s sprint",
+                                                    style = MaterialTheme.typography.bodySmall,
+                                                    fontWeight = FontWeight.Bold,
+                                                    color = MaterialTheme.colorScheme.onSurface
+                                                )
+                                            } else {
+                                                Text(
+                                                    text = "${item.log.actualSets} sets total",
+                                                    style = MaterialTheme.typography.bodySmall,
+                                                    fontWeight = FontWeight.Bold,
+                                                    color = MaterialTheme.colorScheme.onSurface
+                                                )
+                                                if (item.log.actualWeight > 0 && setsList.isEmpty()) {
+                                                    Text(
+                                                        text = "$weightFormatted kg",
+                                                        style = MaterialTheme.typography.labelSmall,
+                                                        color = CyanAccent
+                                                    )
+                                                }
+                                            }
+                                        }
                                     }
 
-                                    Column(horizontalAlignment = Alignment.End) {
-                                        if (item.exercise.isSprint) {
-                                            Text(
-                                                text = "${item.log.actualDurationSeconds}s sprint",
-                                                style = MaterialTheme.typography.bodySmall,
-                                                fontWeight = FontWeight.Bold,
-                                                color = MaterialTheme.colorScheme.onSurface
-                                            )
-                                        } else {
-                                            Text(
-                                                text = "${item.log.actualSets} sets × ${item.log.actualReps} reps",
-                                                style = MaterialTheme.typography.bodySmall,
-                                                fontWeight = FontWeight.Bold,
-                                                color = MaterialTheme.colorScheme.onSurface
-                                            )
-                                            if (item.log.actualWeight > 0) {
-                                                Text(
-                                                    text = "$weightFormatted kg",
-                                                    style = MaterialTheme.typography.labelSmall,
-                                                    color = CyanAccent
-                                                )
+                                    // Display detailed sets or sprint rounds if available
+                                    if (setsList.isNotEmpty()) {
+                                        Spacer(modifier = Modifier.height(8.dp))
+                                        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
+                                        Spacer(modifier = Modifier.height(6.dp))
+
+                                        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                            setsList.forEach { s ->
+                                                val isSprintItem = item.exercise.isSprint
+                                                val setWeightFormatted = if (s.weight % 1.0 == 0.0) {
+                                                    "${s.weight.toInt()}"
+                                                } else {
+                                                    "${s.weight}"
+                                                }
+                                                Row(
+                                                    modifier = Modifier.fillMaxWidth(),
+                                                    verticalAlignment = Alignment.CenterVertically,
+                                                    horizontalArrangement = Arrangement.SpaceBetween
+                                                ) {
+                                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                                        val prefix = if (isSprintItem) "Round" else "Set"
+                                                        Text(
+                                                            text = "$prefix ${s.setNumber}:",
+                                                            style = MaterialTheme.typography.labelSmall,
+                                                            fontWeight = FontWeight.Bold,
+                                                            color = if (s.isCompleted) EmeraldLight else MaterialTheme.colorScheme.onSurfaceVariant
+                                                        )
+                                                        Spacer(modifier = Modifier.width(6.dp))
+                                                        Text(
+                                                            text = if (isSprintItem) "${s.reps}s sprint" else "${s.reps} reps",
+                                                            style = MaterialTheme.typography.bodySmall,
+                                                            color = MaterialTheme.colorScheme.onSurface
+                                                        )
+                                                    }
+                                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                                        if (!isSprintItem && s.weight > 0) {
+                                                            Text(
+                                                                text = "$setWeightFormatted kg",
+                                                                style = MaterialTheme.typography.labelSmall,
+                                                                fontWeight = FontWeight.SemiBold,
+                                                                color = CyanAccent
+                                                            )
+                                                            Spacer(modifier = Modifier.width(6.dp))
+                                                        }
+                                                        if (s.isCompleted) {
+                                                            Text(
+                                                                text = "✓",
+                                                                style = MaterialTheme.typography.labelSmall,
+                                                                color = EmeraldPrimary,
+                                                                fontWeight = FontWeight.Bold
+                                                            )
+                                                        }
+                                                    }
+                                                }
                                             }
                                         }
                                     }
@@ -631,7 +701,6 @@ fun DayWorkoutDetailsDialog(
                         }
                     }
 
-                    // 2. Food / Nutrition Section
                     if (foodLogs.isNotEmpty()) {
                         Row(
                             modifier = Modifier.fillMaxWidth(),
