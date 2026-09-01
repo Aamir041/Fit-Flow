@@ -99,6 +99,72 @@ fun calculateWeightTimeline(
     return result
 }
 
+enum class WeightTimeRange(val label: String, val days: Int?) {
+    WEEK_1("1W", 7),
+    MONTH_1("1M", 30),
+    MONTH_3("3M", 90),
+    MONTH_6("6M", 180),
+    YEAR_1("1Y", 365),
+    ALL("ALL", null)
+}
+
+enum class WeightUnit(val label: String, val factor: Double) {
+    KG("kg", 1.0),
+    LBS("lbs", 2.20462);
+
+    fun fromKg(weightKg: Double): Double {
+        return ((weightKg * factor) * 10.0).roundToInt() / 10.0
+    }
+
+    fun format(weightKg: Double): String {
+        return "${fromKg(weightKg)} $label"
+    }
+}
+
+enum class WeightChartStyle(val label: String) {
+    SMOOTH("Curve"),
+    LINEAR("Line")
+}
+
+fun filterWeightTimeline(
+    fullTimeline: List<WeightDataPoint>,
+    range: WeightTimeRange,
+    today: LocalDate = LocalDate.now()
+): List<WeightDataPoint> {
+    if (fullTimeline.isEmpty() || range == WeightTimeRange.ALL || range.days == null) {
+        return fullTimeline
+    }
+
+    val cutoffDate = today.minusDays((range.days - 1).toLong())
+    val filtered = fullTimeline.filter { !it.date.isBefore(cutoffDate) }
+    
+    // If filtered points don't span from cutoffDate, but we have earlier history,
+    // prepend the baseline from the latest point before cutoff
+    if (filtered.isEmpty() && fullTimeline.isNotEmpty()) {
+        val lastKnown = fullTimeline.last()
+        return listOf(lastKnown)
+    }
+    
+    return filtered
+}
+
+/**
+ * Calculates a rolling moving average for the given timeline.
+ */
+fun calculateMovingAverage(
+    timeline: List<WeightDataPoint>,
+    windowSize: Int = 7
+): List<Double> {
+    if (timeline.isEmpty()) return emptyList()
+    val weights = timeline.map { it.weightKg }
+    return weights.indices.map { i ->
+        val startIdx = maxOf(0, i - windowSize + 1)
+        val window = weights.subList(startIdx, i + 1)
+        val avg = window.average()
+        ((avg * 10.0).roundToInt() / 10.0)
+    }
+}
+
 fun calculateWeightSummaryStats(
     logs: List<WeightLogEntity>,
     timeline: List<WeightDataPoint>

@@ -221,7 +221,10 @@ fun FitFlowNavGraph(
             }
         ) {
             val settingsViewModel: SettingsViewModel = viewModel(
-                factory = ViewModelFactory(themePreferences = themePreferences)
+                factory = ViewModelFactory(
+                    repository = repository,
+                    themePreferences = themePreferences
+                )
             )
             SettingsScreen(
                 viewModel = settingsViewModel,

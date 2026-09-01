@@ -185,4 +185,64 @@ class WeightTrackingLogicTest {
         assertEquals("2026-08-25", parsedBundle.weightLogs[1].date)
         assertEquals(74.2, parsedBundle.weightLogs[1].weightKg, 0.001)
     }
+
+    @Test
+    fun testTimeRangeFilters() {
+        val today = LocalDate.of(2026, 9, 1)
+        val logs = listOf(
+            WeightLogEntity(id = 1, date = "2026-01-01", weightKg = 90.0),
+            WeightLogEntity(id = 2, date = "2026-08-01", weightKg = 80.0),
+            WeightLogEntity(id = 3, date = "2026-08-28", weightKg = 78.0),
+            WeightLogEntity(id = 4, date = "2026-09-01", weightKg = 77.0)
+        )
+
+        val fullTimeline = calculateWeightTimeline(logs, today = today)
+        assertTrue(fullTimeline.size > 200)
+
+        // 1W -> 7 days
+        val weekTimeline = com.fitflow.app.data.local.model.filterWeightTimeline(fullTimeline, com.fitflow.app.data.local.model.WeightTimeRange.WEEK_1, today)
+        assertEquals(7, weekTimeline.size)
+        assertEquals(LocalDate.of(2026, 8, 26), weekTimeline.first().date)
+        assertEquals(LocalDate.of(2026, 9, 1), weekTimeline.last().date)
+
+        // 1M -> 30 days
+        val monthTimeline = com.fitflow.app.data.local.model.filterWeightTimeline(fullTimeline, com.fitflow.app.data.local.model.WeightTimeRange.MONTH_1, today)
+        assertEquals(30, monthTimeline.size)
+
+        // ALL -> Full timeline
+        val allTimeline = com.fitflow.app.data.local.model.filterWeightTimeline(fullTimeline, com.fitflow.app.data.local.model.WeightTimeRange.ALL, today)
+        assertEquals(fullTimeline.size, allTimeline.size)
+    }
+
+    @Test
+    fun testUnitConversion() {
+        val weightKg = 75.0
+        val kgConverted = com.fitflow.app.data.local.model.WeightUnit.KG.fromKg(weightKg)
+        val lbsConverted = com.fitflow.app.data.local.model.WeightUnit.LBS.fromKg(weightKg)
+
+        assertEquals(75.0, kgConverted, 0.001)
+        assertEquals(165.3, lbsConverted, 0.1) // 75 * 2.20462 = 165.3465 -> 165.3
+    }
+
+    @Test
+    fun testMovingAverageCalculation() {
+        val today = LocalDate.of(2026, 9, 5)
+        val logs = listOf(
+            WeightLogEntity(id = 1, date = "2026-09-01", weightKg = 80.0),
+            WeightLogEntity(id = 2, date = "2026-09-02", weightKg = 82.0),
+            WeightLogEntity(id = 3, date = "2026-09-03", weightKg = 84.0),
+            WeightLogEntity(id = 4, date = "2026-09-04", weightKg = 82.0),
+            WeightLogEntity(id = 5, date = "2026-09-05", weightKg = 82.0)
+        )
+
+        val timeline = calculateWeightTimeline(logs, today = today)
+        val ma = com.fitflow.app.data.local.model.calculateMovingAverage(timeline, windowSize = 3)
+
+        assertEquals(5, ma.size)
+        assertEquals(80.0, ma[0], 0.001) // avg(80)
+        assertEquals(81.0, ma[1], 0.001) // avg(80, 82)
+        assertEquals(82.0, ma[2], 0.001) // avg(80, 82, 84)
+        assertEquals(82.7, ma[3], 0.1)   // avg(82, 84, 82) = 82.666 -> 82.7
+        assertEquals(82.7, ma[4], 0.1)   // avg(84, 82, 82) = 82.666 -> 82.7
+    }
 }

@@ -86,21 +86,7 @@ fun HistoryScreen(
     modifier: Modifier = Modifier
 ) {
     val uiState by viewModel.uiState.collectAsState()
-    val context = LocalContext.current
     val snackbarHostState = remember { SnackbarHostState() }
-
-    // Launchers
-    val exportLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.CreateDocument("application/json")
-    ) { uri ->
-        uri?.let { viewModel.exportHistory(context, it) }
-    }
-
-    val importLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.OpenDocument()
-    ) { uri ->
-        uri?.let { viewModel.importHistory(context, it) }
-    }
 
     LaunchedEffect(uiState.message) {
         uiState.message?.let {
@@ -109,62 +95,9 @@ fun HistoryScreen(
         }
     }
 
-    var showDeleteDialog by remember { mutableStateOf(false) }
-    var showDeleteWeightLogsDialog by remember { mutableStateOf(false) }
-
-    if (showDeleteDialog) {
-        AlertDialog(
-            onDismissRequest = { showDeleteDialog = false },
-            title = { Text("Clear All History?") },
-            text = { Text("This will permanently delete all your logged workouts, food logs, and weight history. This action cannot be undone.") },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        viewModel.deleteHistory()
-                        showDeleteDialog = false
-                    }
-                ) {
-                    Text("Clear All", color = MaterialTheme.colorScheme.error)
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showDeleteDialog = false }) {
-                    Text("Cancel")
-                }
-            }
-        )
-    }
-
-    if (showDeleteWeightLogsDialog) {
-        AlertDialog(
-            onDismissRequest = { showDeleteWeightLogsDialog = false },
-            title = { Text("Delete All Weight Logs?") },
-            text = { Text("This will permanently delete all your recorded body weight history. This action cannot be undone.") },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        viewModel.deleteAllWeightLogs()
-                        showDeleteWeightLogsDialog = false
-                    }
-                ) {
-                    Text("Delete Weight Logs", color = MaterialTheme.colorScheme.error)
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showDeleteWeightLogsDialog = false }) {
-                    Text("Cancel")
-                }
-            }
-        )
-    }
-
     HistoryScreenContent(
         uiState = uiState,
         snackbarHostState = snackbarHostState,
-        onExport = { exportLauncher.launch("fitflow_history_${System.currentTimeMillis()}.json") },
-        onImport = { importLauncher.launch(arrayOf("application/json")) },
-        onClear = { showDeleteDialog = true },
-        onClearWeightLogs = { showDeleteWeightLogsDialog = true },
         onSaveWeight = { dateStr, weightKg -> viewModel.saveWeight(dateStr, weightKg) },
         onDeleteWeight = { dateStr -> viewModel.deleteWeight(dateStr) },
         modifier = modifier
@@ -175,15 +108,10 @@ fun HistoryScreen(
 fun HistoryScreenContent(
     uiState: HistoryUiState,
     snackbarHostState: SnackbarHostState,
-    onExport: () -> Unit,
-    onImport: () -> Unit,
-    onClear: () -> Unit,
-    onClearWeightLogs: () -> Unit = {},
     onSaveWeight: (dateStr: String, weightKg: Double) -> Unit = { _, _ -> },
     onDeleteWeight: (dateStr: String) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
-    var showMenu by remember { mutableStateOf(false) }
     var selectedMonth by remember { mutableStateOf(YearMonth.now()) }
     var selectedDateForDetails by remember { mutableStateOf<String?>(null) }
     var showLogWeightDialog by remember { mutableStateOf(false) }
@@ -193,64 +121,7 @@ fun HistoryScreenContent(
         topBar = {
             FitFlowTopBar(
                 title = "Stats",
-                subtitle = "Track your consistency, personal records, and weight progress",
-                actions = {
-                    Box {
-                        IconButton(onClick = { showMenu = true }) {
-                            Icon(Icons.Default.MoreVert, contentDescription = "Stats Options")
-                        }
-                        DropdownMenu(
-                            expanded = showMenu,
-                            onDismissRequest = { showMenu = false }
-                        ) {
-                            DropdownMenuItem(
-                                text = { Text("Export History") },
-                                onClick = {
-                                    showMenu = false
-                                    onExport()
-                                },
-                                leadingIcon = { Icon(Icons.Default.Upload, contentDescription = null) }
-                            )
-                            DropdownMenuItem(
-                                text = { Text("Import History") },
-                                onClick = {
-                                    showMenu = false
-                                    onImport()
-                                },
-                                leadingIcon = { Icon(Icons.Default.Download, contentDescription = null) }
-                            )
-                            HorizontalDivider()
-                            DropdownMenuItem(
-                                text = { Text("Clear Weight Logs", color = MaterialTheme.colorScheme.error) },
-                                onClick = {
-                                    showMenu = false
-                                    onClearWeightLogs()
-                                },
-                                leadingIcon = { 
-                                    Icon(
-                                        Icons.Default.DeleteOutline, 
-                                        contentDescription = null,
-                                        tint = MaterialTheme.colorScheme.error
-                                    ) 
-                                }
-                            )
-                            DropdownMenuItem(
-                                text = { Text("Clear All History", color = MaterialTheme.colorScheme.error) },
-                                onClick = {
-                                    showMenu = false
-                                    onClear()
-                                },
-                                leadingIcon = { 
-                                    Icon(
-                                        Icons.Default.DeleteSweep, 
-                                        contentDescription = null,
-                                        tint = MaterialTheme.colorScheme.error
-                                    ) 
-                                }
-                            )
-                        }
-                    }
-                }
+                subtitle = "Track your consistency, personal records, and weight progress"
             )
         },
         snackbarHost = { SnackbarHost(snackbarHostState) },
@@ -964,10 +835,7 @@ fun HistoryScreenPreview() {
                 groupedByDate = mapOf("2026-08-22" to sampleLogs),
                 isLoading = false
             ),
-            snackbarHostState = SnackbarHostState(),
-            onExport = {},
-            onImport = {},
-            onClear = {}
+            snackbarHostState = SnackbarHostState()
         )
     }
 }
