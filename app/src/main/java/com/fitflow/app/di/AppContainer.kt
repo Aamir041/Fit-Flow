@@ -9,8 +9,11 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 
+import com.fitflow.app.data.local.ThemePreferences
+
 interface AppContainer {
     val repository: FitFlowRepository
+    val themePreferences: ThemePreferences
     val applicationScope: CoroutineScope
 }
 
@@ -24,6 +27,10 @@ class DefaultAppContainer(private val context: Context) : AppContainer {
 
     override val repository: FitFlowRepository by lazy {
         FitFlowRepositoryImpl(database)
+    }
+
+    override val themePreferences: ThemePreferences by lazy {
+        ThemePreferences(context)
     }
 
     init {

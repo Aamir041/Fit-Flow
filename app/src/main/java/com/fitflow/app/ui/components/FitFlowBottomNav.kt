@@ -15,8 +15,6 @@ import androidx.navigation.NavController
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.currentBackStackEntryAsState
 import com.fitflow.app.ui.navigation.BottomNavItems
-import com.fitflow.app.ui.navigation.Screen
-import com.fitflow.app.ui.theme.EmeraldPrimary
 
 @Composable
 fun FitFlowBottomNav(
@@ -69,9 +67,9 @@ fun FitFlowBottomNav(
                     )
                 },
                 colors = NavigationBarItemDefaults.colors(
-                    selectedIconColor = MaterialTheme.colorScheme.background,
-                    selectedTextColor = EmeraldPrimary,
-                    indicatorColor = EmeraldPrimary,
+                    selectedIconColor = MaterialTheme.colorScheme.onPrimary,
+                    selectedTextColor = MaterialTheme.colorScheme.primary,
+                    indicatorColor = MaterialTheme.colorScheme.primary,
                     unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
                     unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant
                 )

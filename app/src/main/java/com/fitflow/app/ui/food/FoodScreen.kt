@@ -53,8 +53,6 @@ import androidx.compose.ui.unit.sp
 import com.fitflow.app.data.local.entity.FoodLogEntity
 import com.fitflow.app.ui.components.EmptyStateCard
 import com.fitflow.app.ui.components.FitFlowTopBar
-import com.fitflow.app.ui.theme.CyanAccent
-import com.fitflow.app.ui.theme.EmeraldPrimary
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 
@@ -83,8 +81,8 @@ fun FoodScreen(
         floatingActionButton = {
             FloatingActionButton(
                 onClick = { viewModel.openAddFoodDialog() },
-                containerColor = EmeraldPrimary,
-                contentColor = MaterialTheme.colorScheme.background,
+                containerColor = MaterialTheme.colorScheme.primary,
+                contentColor = MaterialTheme.colorScheme.onPrimary,
                 shape = CircleShape
             ) {
                 Icon(Icons.Default.Add, contentDescription = "Log Food")
@@ -202,14 +200,14 @@ fun CalorieSummaryCard(
                     Icon(
                         imageVector = Icons.Default.LocalFireDepartment,
                         contentDescription = null,
-                        tint = CyanAccent,
+                        tint = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.size(20.dp)
                     )
                     Spacer(modifier = Modifier.width(6.dp))
                     Text(
                         text = "DAILY ENERGY INTAKE",
                         style = MaterialTheme.typography.labelSmall,
-                        color = CyanAccent,
+                        color = MaterialTheme.colorScheme.primary,
                         fontWeight = FontWeight.Bold,
                         letterSpacing = 1.sp
                     )
@@ -247,7 +245,7 @@ fun CalorieSummaryCard(
                         text = "$foodCount",
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
-                        color = EmeraldPrimary
+                        color = MaterialTheme.colorScheme.primary
                     )
                     Text(
                         text = if (foodCount == 1) "item" else "items",
@@ -279,13 +277,13 @@ fun MealHeader(
                 modifier = Modifier
                     .size(8.dp)
                     .clip(CircleShape)
-                    .background(EmeraldPrimary)
+                    .background(MaterialTheme.colorScheme.primary)
             )
             Spacer(modifier = Modifier.width(8.dp))
             Text(
                 text = meal.uppercase(),
                 style = MaterialTheme.typography.labelSmall,
-                color = EmeraldPrimary,
+                color = MaterialTheme.colorScheme.primary,
                 fontWeight = FontWeight.Bold,
                 letterSpacing = 1.sp
             )
@@ -359,7 +357,7 @@ fun FoodLogCard(
                         text = "${food.calories} kcal",
                         style = MaterialTheme.typography.titleSmall,
                         fontWeight = FontWeight.ExtraBold,
-                        color = CyanAccent
+                        color = MaterialTheme.colorScheme.primary
                     )
                 }
 

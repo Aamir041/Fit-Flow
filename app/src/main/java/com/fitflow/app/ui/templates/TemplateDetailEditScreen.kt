@@ -1,5 +1,6 @@
 package com.fitflow.app.ui.templates
 
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -16,15 +17,14 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowDownward
 import androidx.compose.material.icons.filled.ArrowUpward
 import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.DeleteOutline
+import androidx.compose.material.icons.filled.FitnessCenter
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -56,11 +56,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.fitflow.app.data.local.entity.ExerciseEntity
 import com.fitflow.app.ui.components.CategoryBadge
-import com.fitflow.app.ui.components.SprintBadge
 import com.fitflow.app.ui.components.FitFlowTopBar
 import com.fitflow.app.ui.components.NumberStepper
-import com.fitflow.app.ui.theme.CrimsonAlert
-import com.fitflow.app.ui.theme.EmeraldPrimary
+import com.fitflow.app.ui.components.SprintBadge
 import com.fitflow.app.ui.theme.FitFlowTheme
 import kotlinx.coroutines.flow.collectLatest
 
@@ -83,8 +81,8 @@ fun TemplateDetailEditScreen(
     }
 
     LaunchedEffect(uiState.generalError) {
-        uiState.generalError?.let { msg ->
-            snackbarHostState.showSnackbar(msg)
+        uiState.generalError?.let { error ->
+            snackbarHostState.showSnackbar(error)
         }
     }
 
@@ -103,11 +101,11 @@ fun TemplateDetailEditScreen(
         onRemoveExercise = { viewModel.removeExercise(it) },
         onMoveUp = { viewModel.moveExerciseUp(it) },
         onMoveDown = { viewModel.moveExerciseDown(it) },
-        onUpdateExerciseValues = { idx, sets, reps, rest ->
-            viewModel.updateExerciseValues(idx, sets, reps, rest)
+        onUpdateExerciseValues = { index, sets, reps, rest ->
+            viewModel.updateExerciseValues(index, sets, reps, rest)
         },
-        onUpdateSprintValues = { idx, rounds, duration, rest ->
-            viewModel.updateSprintValues(idx, rounds, duration, rest)
+        onSprintValuesChanged = { index, rounds, duration, rest ->
+            viewModel.updateSprintValues(index, rounds, duration, rest)
         },
         onSaveTemplate = { viewModel.saveTemplate() },
         onNavigateBack = onNavigateBack,
@@ -126,18 +124,18 @@ fun TemplateDetailEditScreenContent(
     onCategoryFilterChanged: (String) -> Unit,
     onSearchQueryChanged: (String) -> Unit,
     onAddExercise: (ExerciseEntity) -> Unit,
-    onCreateCustomExercise: (String, String, Int, Int, Boolean, Int) -> Unit,
+    onCreateCustomExercise: (name: String, category: String, sets: Int, reps: Int, isSprint: Boolean, durationSeconds: Int) -> Unit,
     onRemoveExercise: (Int) -> Unit,
     onMoveUp: (Int) -> Unit,
     onMoveDown: (Int) -> Unit,
-    onUpdateExerciseValues: (Int, Int, Int, Int) -> Unit,
-    onUpdateSprintValues: (Int, Int, Int, Int) -> Unit = { _, _, _, _ -> },
+    onUpdateExerciseValues: (index: Int, sets: Int, reps: Int, restSeconds: Int) -> Unit,
+    onSprintValuesChanged: (index: Int, rounds: Int, durationSeconds: Int, restSeconds: Int) -> Unit,
     onSaveTemplate: () -> Unit,
     onNavigateBack: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val isEditMode = uiState.templateId > 0L
-    val screenTitle = if (isEditMode) "Edit Template" else "New Template"
+    val screenTitle = if (isEditMode) "Edit Routine Split" else "New Workout Routine"
 
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) },
@@ -149,7 +147,10 @@ fun TemplateDetailEditScreenContent(
                 actions = {
                     Button(
                         onClick = onSaveTemplate,
-                        colors = ButtonDefaults.buttonColors(containerColor = EmeraldPrimary),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.primary,
+                            contentColor = MaterialTheme.colorScheme.onPrimary
+                        ),
                         shape = RoundedCornerShape(10.dp),
                         contentPadding = PaddingValues(horizontal = 14.dp, vertical = 6.dp)
                     ) {
@@ -178,7 +179,7 @@ fun TemplateDetailEditScreenContent(
                     .padding(innerPadding),
                 contentAlignment = Alignment.Center
             ) {
-                CircularProgressIndicator(color = EmeraldPrimary)
+                CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
             }
         } else {
             LazyColumn(
@@ -198,11 +199,11 @@ fun TemplateDetailEditScreenContent(
                         singleLine = true,
                         isError = uiState.nameError != null,
                         supportingText = if (uiState.nameError != null) {
-                            { Text(uiState.nameError, color = CrimsonAlert) }
+                            { Text(uiState.nameError, color = MaterialTheme.colorScheme.error) }
                         } else null,
                         shape = RoundedCornerShape(12.dp),
                         colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = EmeraldPrimary,
+                            focusedBorderColor = MaterialTheme.colorScheme.primary,
                             unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant,
                             focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
                             unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant
@@ -234,13 +235,13 @@ fun TemplateDetailEditScreenContent(
                             Icon(
                                 imageVector = Icons.Default.Add,
                                 contentDescription = null,
-                                tint = EmeraldPrimary,
+                                tint = MaterialTheme.colorScheme.primary,
                                 modifier = Modifier.size(16.dp)
                             )
                             Spacer(modifier = Modifier.width(4.dp))
                             Text(
                                 text = "Add Exercise",
-                                color = EmeraldPrimary,
+                                color = MaterialTheme.colorScheme.primary,
                                 fontWeight = FontWeight.Bold,
                                 style = MaterialTheme.typography.labelMedium
                             )
@@ -260,15 +261,34 @@ fun TemplateDetailEditScreenContent(
                                 .padding(32.dp),
                             contentAlignment = Alignment.Center
                         ) {
-                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.Center
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(56.dp)
+                                        .clip(RoundedCornerShape(16.dp))
+                                        .background(MaterialTheme.colorScheme.surfaceVariant),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.FitnessCenter,
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        modifier = Modifier.size(28.dp)
+                                    )
+                                }
+                                Spacer(modifier = Modifier.height(12.dp))
                                 Text(
-                                    text = "No exercises added yet",
-                                    style = MaterialTheme.typography.titleSmall,
+                                    text = "No Exercises Added Yet",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.Bold,
                                     color = MaterialTheme.colorScheme.onSurface
                                 )
                                 Spacer(modifier = Modifier.height(4.dp))
                                 Text(
-                                    text = "Tap '+ Add Exercise' to pick from the library",
+                                    text = "Tap '+ Add Exercise' to pick movements from library",
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
@@ -278,48 +298,43 @@ fun TemplateDetailEditScreenContent(
                 } else {
                     itemsIndexed(
                         items = uiState.exercises,
-                        key = { _, item -> item.exerciseId }
+                        key = { index, item -> "${item.exerciseId}_$index" }
                     ) { index, item ->
-                        ConfigurableExerciseCard(
+                        EditableExerciseCard(
                             item = item,
                             index = index,
                             totalCount = uiState.exercises.size,
-                            onMoveUp = { onMoveUp(index) },
-                            onMoveDown = { onMoveDown(index) },
-                            onRemove = { onRemoveExercise(index) },
                             onValuesChanged = { sets, reps, rest ->
                                 onUpdateExerciseValues(index, sets, reps, rest)
                             },
                             onSprintValuesChanged = { rounds, duration, rest ->
-                                onUpdateSprintValues(index, rounds, duration, rest)
-                            }
+                                onSprintValuesChanged(index, rounds, duration, rest)
+                            },
+                            onMoveUp = { onMoveUp(index) },
+                            onMoveDown = { onMoveDown(index) },
+                            onRemove = { onRemoveExercise(index) }
                         )
                     }
                 }
 
                 item {
-                    Spacer(modifier = Modifier.height(32.dp))
+                    Spacer(modifier = Modifier.height(24.dp))
                 }
             }
         }
 
-        // Bottom Sheet Picker
+        // Exercise Picker Bottom Sheet
         if (uiState.isPickerOpen) {
-            val selectedIds = remember(uiState.exercises) {
-                uiState.exercises.map { it.exerciseId }.toSet()
-            }
-
+            val alreadySelectedIds = uiState.exercises.map { it.exerciseId }.toSet()
             ExercisePickerBottomSheet(
                 availableExercises = uiState.availableExercises,
-                alreadySelectedExerciseIds = selectedIds,
-                selectedCategory = uiState.selectedCategory,
                 searchQuery = uiState.searchQuery,
-                onCategorySelected = onCategoryFilterChanged,
+                selectedCategory = uiState.selectedCategory,
+                alreadySelectedExerciseIds = alreadySelectedIds,
                 onSearchQueryChanged = onSearchQueryChanged,
+                onCategorySelected = onCategoryFilterChanged,
                 onExerciseSelected = onAddExercise,
-                onCreateCustomExercise = { name, cat, sets, reps, isSprint, duration ->
-                    onCreateCustomExercise(name, cat, sets, reps, isSprint, duration)
-                },
+                onCreateCustomExercise = onCreateCustomExercise,
                 onDismiss = onClosePicker
             )
         }
@@ -327,27 +342,31 @@ fun TemplateDetailEditScreenContent(
 }
 
 @Composable
-fun ConfigurableExerciseCard(
+fun EditableExerciseCard(
     item: EditableExerciseItem,
     index: Int,
     totalCount: Int,
+    onValuesChanged: (sets: Int, reps: Int, restSeconds: Int) -> Unit,
+    onSprintValuesChanged: (rounds: Int, durationSeconds: Int, restSeconds: Int) -> Unit,
     onMoveUp: () -> Unit,
     onMoveDown: () -> Unit,
     onRemove: () -> Unit,
-    onValuesChanged: (sets: Int, reps: Int, restSeconds: Int) -> Unit,
-    onSprintValuesChanged: (rounds: Int, durationSeconds: Int, restSeconds: Int) -> Unit = { _, _, _ -> },
     modifier: Modifier = Modifier
 ) {
     Card(
         modifier = modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(16.dp))
-            .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(16.dp)),
+            .border(
+                1.dp,
+                if (item.isSprint) MaterialTheme.colorScheme.primary.copy(alpha = 0.4f) else MaterialTheme.colorScheme.outlineVariant,
+                RoundedCornerShape(16.dp)
+            ),
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
     ) {
         Column(modifier = Modifier.padding(14.dp)) {
-            // Row 1: Exercise Index + Name + Category + Up/Down/Delete Actions
+            // Row 1: Exercise Index + Name + Category + Reorder & Remove Actions
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
@@ -359,19 +378,21 @@ fun ConfigurableExerciseCard(
                 ) {
                     Box(
                         modifier = Modifier
-                            .size(24.dp)
-                            .clip(CircleShape)
+                            .size(28.dp)
+                            .clip(RoundedCornerShape(8.dp))
                             .background(MaterialTheme.colorScheme.surfaceVariant),
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
                             text = "${index + 1}",
-                            style = MaterialTheme.typography.labelSmall,
+                            style = MaterialTheme.typography.labelMedium,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.onSurface
                         )
                     }
-                    Spacer(modifier = Modifier.width(8.dp))
+
+                    Spacer(modifier = Modifier.width(10.dp))
+
                     Column {
                         Text(
                             text = item.name,
@@ -379,7 +400,7 @@ fun ConfigurableExerciseCard(
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.onSurface
                         )
-                        Spacer(modifier = Modifier.height(4.dp))
+                        Spacer(modifier = Modifier.height(2.dp))
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(6.dp)
@@ -392,7 +413,7 @@ fun ConfigurableExerciseCard(
                     }
                 }
 
-                // Reorder controls + Delete
+                // Reorder and Delete Buttons
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     IconButton(
                         onClick = onMoveUp,
@@ -425,7 +446,7 @@ fun ConfigurableExerciseCard(
                         Icon(
                             imageVector = Icons.Default.DeleteOutline,
                             contentDescription = "Remove",
-                            tint = CrimsonAlert,
+                            tint = MaterialTheme.colorScheme.error,
                             modifier = Modifier.size(18.dp)
                         )
                     }
@@ -530,6 +551,7 @@ fun ConfigurableExerciseCard(
 @Composable
 fun TemplateDetailEditPreview() {
     FitFlowTheme {
+        val snackbarHostState = remember { SnackbarHostState() }
         TemplateDetailEditScreenContent(
             uiState = TemplateEditUiState(
                 templateName = "Chest & Back Super Split",
@@ -538,7 +560,7 @@ fun TemplateDetailEditPreview() {
                     EditableExerciseItem(exerciseId = 2, name = "Pull-ups", category = "Back", targetSets = 3, targetReps = 10, restTimeSeconds = 90)
                 )
             ),
-            snackbarHostState = remember { SnackbarHostState() },
+            snackbarHostState = snackbarHostState,
             onNameChanged = {},
             onOpenPicker = {},
             onClosePicker = {},
@@ -550,6 +572,7 @@ fun TemplateDetailEditPreview() {
             onMoveUp = {},
             onMoveDown = {},
             onUpdateExerciseValues = { _, _, _, _ -> },
+            onSprintValuesChanged = { _, _, _, _ -> },
             onSaveTemplate = {},
             onNavigateBack = {}
         )

@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
@@ -49,8 +50,6 @@ import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.fitflow.app.data.local.entity.FoodLogEntity
-import com.fitflow.app.ui.theme.CyanAccent
-import com.fitflow.app.ui.theme.EmeraldPrimary
 
 val StandardFoodUnits = listOf(
     Pair("g", "Grams (g)"),
@@ -70,42 +69,46 @@ val StandardFoodUnits = listOf(
 
 val StandardMealTimes = listOf(
     "Breakfast",
+    "Morning Snack",
     "Lunch",
-    "Dinner",
-    "Snack",
+    "Afternoon Snack",
     "Pre-Workout",
-    "Post-Workout"
+    "Post-Workout",
+    "Dinner",
+    "Evening Snack"
 )
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun AddEditFoodDialog(
-    foodToEdit: FoodLogEntity?,
-    onDismiss: () -> Unit,
+    foodToEdit: FoodLogEntity? = null,
     onSave: (foodName: String, quantity: Double, unit: String, calories: Int, mealTime: String) -> Unit,
-    modifier: Modifier = Modifier
+    onDismiss: () -> Unit
 ) {
     var foodName by remember { mutableStateOf(foodToEdit?.foodName ?: "") }
     var quantityText by remember {
-        val qty = foodToEdit?.quantity ?: 1.0
-        mutableStateOf(if (qty % 1.0 == 0.0) qty.toInt().toString() else qty.toString())
+        mutableStateOf(
+            if (foodToEdit != null) {
+                if (foodToEdit.quantity % 1.0 == 0.0) foodToEdit.quantity.toInt().toString()
+                else foodToEdit.quantity.toString()
+            } else "100"
+        )
     }
     var selectedUnit by remember {
-        val u = foodToEdit?.unit?.trim() ?: "g"
-        val isKnown = StandardFoodUnits.any { it.first.equals(u, ignoreCase = true) }
-        mutableStateOf(if (isKnown) u.lowercase() else "custom")
+        mutableStateOf(
+            if (foodToEdit != null) {
+                if (StandardFoodUnits.any { it.first == foodToEdit.unit }) foodToEdit.unit else "custom"
+            } else "g"
+        )
     }
     var customUnitText by remember {
-        val u = foodToEdit?.unit?.trim() ?: ""
-        val isKnown = StandardFoodUnits.any { it.first.equals(u, ignoreCase = true) }
-        mutableStateOf(if (!isKnown && u.isNotEmpty()) u else "")
+        mutableStateOf(
+            if (foodToEdit != null && StandardFoodUnits.none { it.first == foodToEdit.unit }) foodToEdit.unit else ""
+        )
     }
-    var caloriesText by remember {
-        mutableStateOf(foodToEdit?.calories?.toString() ?: "")
-    }
-    var selectedMealTime by remember {
-        mutableStateOf(foodToEdit?.mealTime ?: "Breakfast")
-    }
+    var caloriesText by remember { mutableStateOf(foodToEdit?.calories?.toString() ?: "") }
+    var selectedMealTime by remember { mutableStateOf(foodToEdit?.mealTime ?: "Breakfast") }
+
     var isUnitDropdownExpanded by remember { mutableStateOf(false) }
 
     var nameError by remember { mutableStateOf(false) }
@@ -116,16 +119,24 @@ fun AddEditFoodDialog(
         onDismissRequest = onDismiss,
         title = {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(
-                    imageVector = Icons.Default.Restaurant,
-                    contentDescription = null,
-                    tint = EmeraldPrimary,
-                    modifier = Modifier.size(24.dp)
-                )
+                Box(
+                    modifier = Modifier
+                        .size(36.dp)
+                        .clip(CircleShape)
+                        .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Restaurant,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
                 Spacer(modifier = Modifier.width(10.dp))
                 Text(
-                    text = if (foodToEdit != null) "Edit Food Log" else "Log Food",
-                    style = MaterialTheme.typography.titleMedium,
+                    text = if (foodToEdit != null) "Edit Food Entry" else "Log Food Item",
+                    style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurface
                 )
@@ -154,8 +165,8 @@ fun AddEditFoodDialog(
                     singleLine = true,
                     keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Words),
                     colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = EmeraldPrimary,
-                        focusedLabelColor = EmeraldPrimary
+                        focusedBorderColor = MaterialTheme.colorScheme.primary,
+                        focusedLabelColor = MaterialTheme.colorScheme.primary
                     ),
                     modifier = Modifier.fillMaxWidth()
                 )
@@ -180,13 +191,13 @@ fun AddEditFoodDialog(
                             { Text("Invalid", color = MaterialTheme.colorScheme.error) }
                         } else null,
                         leadingIcon = {
-                            Icon(Icons.Default.Scale, contentDescription = null, modifier = Modifier.size(18.dp), tint = EmeraldPrimary)
+                            Icon(Icons.Default.Scale, contentDescription = null, modifier = Modifier.size(18.dp), tint = MaterialTheme.colorScheme.primary)
                         },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                         singleLine = true,
                         colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = EmeraldPrimary,
-                            focusedLabelColor = EmeraldPrimary
+                            focusedBorderColor = MaterialTheme.colorScheme.primary,
+                            focusedLabelColor = MaterialTheme.colorScheme.primary
                         ),
                         modifier = Modifier.weight(1.1f)
                     )
@@ -200,18 +211,18 @@ fun AddEditFoodDialog(
                             readOnly = true,
                             label = { Text("Unit") },
                             trailingIcon = {
-                                Icon(Icons.Default.ArrowDropDown, contentDescription = null, tint = EmeraldPrimary)
+                                Icon(Icons.Default.ArrowDropDown, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
                             },
                             colors = OutlinedTextFieldDefaults.colors(
-                                focusedBorderColor = EmeraldPrimary,
-                                focusedLabelColor = EmeraldPrimary
+                                focusedBorderColor = MaterialTheme.colorScheme.primary,
+                                focusedLabelColor = MaterialTheme.colorScheme.primary
                             ),
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .clickable { isUnitDropdownExpanded = true }
                         )
 
-                        // Invisible clickable overlay to ensure entire box opens dropdown
+                        // Clickable overlay to ensure entire box opens dropdown
                         Box(
                             modifier = Modifier
                                 .matchParentSize()
@@ -244,8 +255,8 @@ fun AddEditFoodDialog(
                         placeholder = { Text("e.g. bar, bottle, bowl, slice") },
                         singleLine = true,
                         colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = EmeraldPrimary,
-                            focusedLabelColor = EmeraldPrimary
+                            focusedBorderColor = MaterialTheme.colorScheme.primary,
+                            focusedLabelColor = MaterialTheme.colorScheme.primary
                         ),
                         modifier = Modifier.fillMaxWidth()
                     )
@@ -265,13 +276,13 @@ fun AddEditFoodDialog(
                         { Text("Please enter calories (>= 0)", color = MaterialTheme.colorScheme.error) }
                     } else null,
                     leadingIcon = {
-                        Icon(Icons.Default.LocalFireDepartment, contentDescription = null, modifier = Modifier.size(18.dp), tint = CyanAccent)
+                        Icon(Icons.Default.LocalFireDepartment, contentDescription = null, modifier = Modifier.size(18.dp), tint = MaterialTheme.colorScheme.primary)
                     },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     singleLine = true,
                     colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = EmeraldPrimary,
-                        focusedLabelColor = EmeraldPrimary
+                        focusedBorderColor = MaterialTheme.colorScheme.primary,
+                        focusedLabelColor = MaterialTheme.colorScheme.primary
                     ),
                     modifier = Modifier.fillMaxWidth()
                 )
@@ -307,11 +318,11 @@ fun AddEditFoodDialog(
                                 modifier = Modifier
                                     .clip(RoundedCornerShape(20.dp))
                                     .background(
-                                        if (isSelected) EmeraldPrimary else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f)
+                                        if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f)
                                     )
                                     .border(
                                         width = 1.dp,
-                                        color = if (isSelected) EmeraldPrimary else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
+                                        color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
                                         shape = RoundedCornerShape(20.dp)
                                     )
                                     .clickable { selectedMealTime = meal }
@@ -321,7 +332,7 @@ fun AddEditFoodDialog(
                                     text = meal,
                                     style = MaterialTheme.typography.labelSmall,
                                     fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-                                    color = if (isSelected) MaterialTheme.colorScheme.background else MaterialTheme.colorScheme.onSurfaceVariant
+                                    color = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                             }
                         }
@@ -351,9 +362,12 @@ fun AddEditFoodDialog(
                         onSave(foodName.trim(), qty!!, finalUnit, cal!!, selectedMealTime)
                     }
                 },
-                colors = ButtonDefaults.buttonColors(containerColor = EmeraldPrimary)
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    contentColor = MaterialTheme.colorScheme.onPrimary
+                )
             ) {
-                Text(if (foodToEdit != null) "Update" else "Log Food", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.background)
+                Text(if (foodToEdit != null) "Update" else "Log Food", fontWeight = FontWeight.Bold)
             }
         },
         dismissButton = {
@@ -363,6 +377,6 @@ fun AddEditFoodDialog(
         },
         shape = RoundedCornerShape(24.dp),
         containerColor = MaterialTheme.colorScheme.surface,
-        modifier = modifier
+        tonalElevation = 6.dp
     )
 }

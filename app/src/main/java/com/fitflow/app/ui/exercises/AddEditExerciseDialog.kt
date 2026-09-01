@@ -19,8 +19,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowDropDown
@@ -58,10 +58,6 @@ import androidx.compose.ui.window.Dialog
 import com.fitflow.app.data.local.entity.ExerciseEntity
 import com.fitflow.app.ui.components.CategoryFilterChip
 import com.fitflow.app.ui.components.NumberStepper
-import com.fitflow.app.ui.theme.CategorySprint
-import com.fitflow.app.ui.theme.CrimsonAlert
-import com.fitflow.app.ui.theme.CyanAccent
-import com.fitflow.app.ui.theme.EmeraldPrimary
 
 val DefaultCategories = listOf("Chest", "Back", "Legs", "Shoulders", "Arms", "Core", "Cardio", "Glutes", "Forearms")
 
@@ -99,44 +95,57 @@ fun AddEditExerciseDialog(
     val allCategories = remember(existingCategories) {
         val set = linkedSetOf<String>()
         set.addAll(DefaultCategories)
-        set.addAll(existingCategories.filter { it.isNotBlank() && it != "All" })
+        set.addAll(existingCategories)
         if (exerciseToEdit != null && exerciseToEdit.category.isNotBlank()) {
             set.add(exerciseToEdit.category)
         }
         set.toList()
     }
 
-    val dynamicCategoriesList = remember { mutableStateListOf(*allCategories.toTypedArray()) }
+    val dynamicCategoriesList = remember { mutableStateListOf<String>().apply { addAll(allCategories) } }
 
     Dialog(onDismissRequest = onDismiss) {
         Surface(
-            shape = RoundedCornerShape(24.dp),
+            shape = RoundedCornerShape(20.dp),
             color = MaterialTheme.colorScheme.surface,
             tonalElevation = 6.dp,
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(vertical = 16.dp)
+            modifier = Modifier.fillMaxWidth()
         ) {
             Column(
                 modifier = Modifier
+                    .fillMaxWidth()
                     .padding(20.dp)
                     .verticalScroll(rememberScrollState())
             ) {
-                Text(
-                    text = if (exerciseToEdit != null) "Edit Movement" else "New Movement",
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
+                // Header
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text(
+                        text = if (exerciseToEdit != null) "Edit Exercise" else "New Movement",
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    IconButton(onClick = onDismiss) {
+                        Text(
+                            text = "✕",
+                            style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
 
-                Spacer(modifier = Modifier.height(14.dp))
+                Spacer(modifier = Modifier.height(16.dp))
 
                 // Exercise Name
                 OutlinedTextField(
                     value = name,
                     onValueChange = {
                         name = it
-                        if (it.isNotBlank()) nameError = null
+                        if (nameError != null) nameError = null
                     },
                     modifier = Modifier.fillMaxWidth(),
                     label = { Text("Exercise Name") },
@@ -144,11 +153,11 @@ fun AddEditExerciseDialog(
                     singleLine = true,
                     isError = nameError != null,
                     supportingText = if (nameError != null) {
-                        { Text(nameError!!, color = CrimsonAlert) }
+                        { Text(nameError!!, color = MaterialTheme.colorScheme.error) }
                     } else null,
                     shape = RoundedCornerShape(12.dp),
                     colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = if (isSprint) CategorySprint else EmeraldPrimary,
+                        focusedBorderColor = MaterialTheme.colorScheme.primary,
                         unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant,
                         focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
                         unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant
@@ -177,12 +186,12 @@ fun AddEditExerciseDialog(
                             .weight(1f)
                             .clip(RoundedCornerShape(12.dp))
                             .background(
-                                if (!isSprint) EmeraldPrimary.copy(alpha = 0.15f)
+                                if (!isSprint) MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
                                 else MaterialTheme.colorScheme.surfaceVariant
                             )
                             .border(
                                 width = 1.dp,
-                                color = if (!isSprint) EmeraldPrimary else MaterialTheme.colorScheme.outlineVariant,
+                                color = if (!isSprint) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant,
                                 shape = RoundedCornerShape(12.dp)
                             )
                             .clickable { isSprint = false }
@@ -193,7 +202,7 @@ fun AddEditExerciseDialog(
                             Icon(
                                 imageVector = Icons.Default.FitnessCenter,
                                 contentDescription = null,
-                                tint = if (!isSprint) EmeraldPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
+                                tint = if (!isSprint) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
                                 modifier = Modifier.size(16.dp)
                             )
                             Spacer(modifier = Modifier.width(6.dp))
@@ -201,7 +210,7 @@ fun AddEditExerciseDialog(
                                 text = "Sets & Reps",
                                 style = MaterialTheme.typography.labelMedium,
                                 fontWeight = if (!isSprint) FontWeight.Bold else FontWeight.Normal,
-                                color = if (!isSprint) EmeraldPrimary else MaterialTheme.colorScheme.onSurfaceVariant
+                                color = if (!isSprint) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
                     }
@@ -212,12 +221,12 @@ fun AddEditExerciseDialog(
                             .weight(1f)
                             .clip(RoundedCornerShape(12.dp))
                             .background(
-                                if (isSprint) CategorySprint.copy(alpha = 0.2f)
+                                if (isSprint) MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)
                                 else MaterialTheme.colorScheme.surfaceVariant
                             )
                             .border(
                                 width = 1.dp,
-                                color = if (isSprint) CategorySprint else MaterialTheme.colorScheme.outlineVariant,
+                                color = if (isSprint) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant,
                                 shape = RoundedCornerShape(12.dp)
                             )
                             .clickable {
@@ -233,7 +242,7 @@ fun AddEditExerciseDialog(
                             Icon(
                                 imageVector = Icons.Default.ElectricBolt,
                                 contentDescription = null,
-                                tint = if (isSprint) CategorySprint else MaterialTheme.colorScheme.onSurfaceVariant,
+                                tint = if (isSprint) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
                                 modifier = Modifier.size(16.dp)
                             )
                             Spacer(modifier = Modifier.width(6.dp))
@@ -241,7 +250,7 @@ fun AddEditExerciseDialog(
                                 text = "Sprint (Time)",
                                 style = MaterialTheme.typography.labelMedium,
                                 fontWeight = if (isSprint) FontWeight.Bold else FontWeight.Normal,
-                                color = if (isSprint) CategorySprint else MaterialTheme.colorScheme.onSurfaceVariant
+                                color = if (isSprint) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
                     }
@@ -270,14 +279,14 @@ fun AddEditExerciseDialog(
                             Icon(
                                 imageVector = Icons.Default.Add,
                                 contentDescription = null,
-                                tint = CyanAccent,
+                                tint = MaterialTheme.colorScheme.primary,
                                 modifier = Modifier.size(14.dp)
                             )
                             Spacer(modifier = Modifier.width(2.dp))
                             Text(
                                 text = "Add Muscle Group",
                                 style = MaterialTheme.typography.labelSmall,
-                                color = CyanAccent,
+                                color = MaterialTheme.colorScheme.primary,
                                 fontWeight = FontWeight.SemiBold
                             )
                         }
@@ -301,7 +310,7 @@ fun AddEditExerciseDialog(
                             singleLine = true,
                             shape = RoundedCornerShape(10.dp),
                             colors = OutlinedTextFieldDefaults.colors(
-                                focusedBorderColor = CyanAccent,
+                                focusedBorderColor = MaterialTheme.colorScheme.primary,
                                 unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant
                             )
                         )
@@ -319,7 +328,10 @@ fun AddEditExerciseDialog(
                                     isAddingCustomCategory = false
                                 }
                             },
-                            colors = ButtonDefaults.buttonColors(containerColor = CyanAccent, contentColor = MaterialTheme.colorScheme.background),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = MaterialTheme.colorScheme.primary,
+                                contentColor = MaterialTheme.colorScheme.onPrimary
+                            ),
                             shape = RoundedCornerShape(10.dp)
                         ) {
                             Text("Add", fontWeight = FontWeight.Bold)
@@ -348,41 +360,23 @@ fun AddEditExerciseDialog(
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                // Conditional Inputs based on isSprint
+                // Configure Targets Section
+                Text(
+                    text = if (isSprint) "SPRINT DURATION CONFIGURATION" else "DEFAULT SETS & REPS TARGETS",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    fontWeight = FontWeight.Bold
+                )
+
+                Spacer(modifier = Modifier.height(8.dp))
+
                 if (isSprint) {
-                    // Sprint Duration Configuration
-                    Text(
-                        text = "DEFAULT SPRINT DURATION",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        fontWeight = FontWeight.Bold
-                    )
-
-                    Spacer(modifier = Modifier.height(6.dp))
-
-                    // Rounds stepper for sprint exercises
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.Center,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        NumberStepper(
-                            label = "Default Rounds",
-                            value = defaultSets,
-                            onValueChange = { defaultSets = it },
-                            minValue = 1,
-                            maxValue = 30
-                        )
-                    }
-
-                    Spacer(modifier = Modifier.height(10.dp))
-
+                    // Sprint Duration Input with Unit Selector
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        // Duration Text Input
                         OutlinedTextField(
                             value = durationInputText,
                             onValueChange = { input ->
@@ -397,7 +391,7 @@ fun AddEditExerciseDialog(
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                             shape = RoundedCornerShape(12.dp),
                             colors = OutlinedTextFieldDefaults.colors(
-                                focusedBorderColor = CategorySprint,
+                                focusedBorderColor = MaterialTheme.colorScheme.primary,
                                 unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant,
                                 focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
                                 unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant
@@ -466,12 +460,12 @@ fun AddEditExerciseDialog(
                                 modifier = Modifier
                                     .clip(RoundedCornerShape(8.dp))
                                     .background(
-                                        if (isSelected) CategorySprint.copy(alpha = 0.25f)
+                                        if (isSelected) MaterialTheme.colorScheme.primary.copy(alpha = 0.25f)
                                         else MaterialTheme.colorScheme.surfaceVariant
                                     )
                                     .border(
                                         width = 1.dp,
-                                        color = if (isSelected) CategorySprint else MaterialTheme.colorScheme.outlineVariant,
+                                        color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant,
                                         shape = RoundedCornerShape(8.dp)
                                     )
                                     .clickable {
@@ -483,7 +477,7 @@ fun AddEditExerciseDialog(
                                 Text(
                                     text = if (presetUnit == "Minutes") "${presetVal}m" else "${presetVal}s",
                                     style = MaterialTheme.typography.labelSmall,
-                                    color = if (isSelected) CategorySprint else MaterialTheme.colorScheme.onSurfaceVariant,
+                                    color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
                                     fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
                                 )
                             }
@@ -523,7 +517,7 @@ fun AddEditExerciseDialog(
                     if (exerciseToEdit?.isCustom == true && onDelete != null) {
                         TextButton(
                             onClick = onDelete,
-                            colors = ButtonDefaults.textButtonColors(contentColor = CrimsonAlert)
+                            colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
                         ) {
                             Icon(
                                 imageVector = Icons.Default.DeleteOutline,
@@ -568,8 +562,8 @@ fun AddEditExerciseDialog(
                                 }
                             },
                             colors = ButtonDefaults.buttonColors(
-                                containerColor = if (isSprint) CategorySprint else EmeraldPrimary,
-                                contentColor = MaterialTheme.colorScheme.background
+                                containerColor = MaterialTheme.colorScheme.primary,
+                                contentColor = MaterialTheme.colorScheme.onPrimary
                             ),
                             shape = RoundedCornerShape(10.dp)
                         ) {

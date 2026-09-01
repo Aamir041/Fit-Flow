@@ -42,8 +42,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
-import com.fitflow.app.ui.theme.CyanAccent
-import com.fitflow.app.ui.theme.EmeraldPrimary
 import kotlinx.coroutines.delay
 
 @Composable
@@ -124,7 +122,7 @@ fun RestTimerDialog(
                     CircularProgressIndicator(
                         progress = { progress },
                         modifier = Modifier.size(180.dp),
-                        color = if (secondsRemaining <= 10) CyanAccent else EmeraldPrimary,
+                        color = MaterialTheme.colorScheme.primary,
                         strokeWidth = 10.dp
                     )
 
@@ -140,7 +138,7 @@ fun RestTimerDialog(
                         Text(
                             text = if (secondsRemaining == 0) "TIME'S UP!" else "REMAINING",
                             style = MaterialTheme.typography.labelSmall,
-                            color = if (secondsRemaining == 0) EmeraldPrimary else MaterialTheme.colorScheme.onSurfaceVariant
+                            color = if (secondsRemaining == 0) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                 }
@@ -216,8 +214,8 @@ fun RestTimerDialog(
                             .width(140.dp),
                         shape = RoundedCornerShape(14.dp),
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = EmeraldPrimary,
-                            contentColor = MaterialTheme.colorScheme.background
+                            containerColor = MaterialTheme.colorScheme.primary,
+                            contentColor = MaterialTheme.colorScheme.onPrimary
                         )
                     ) {
                         Icon(
