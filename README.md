@@ -1,85 +1,95 @@
-# FitFlow - Native Android Gym Tracking App 🏋️‍♂️⚡
+# FitFlow - Native Android Gym & Fitness Tracking App 🏋️‍♂️⚡
 
-**FitFlow** is a modern native Android gym tracking app built with **Kotlin**, **Jetpack Compose (Material 3)**, **MVVM architecture**, **Room (SQLite)** with multi-table relationships & auto-seeding, and **Jetpack Navigation Compose**.
+**FitFlow** is a modern, high-performance native Android workout tracking application built with **Kotlin**, **Jetpack Compose (Material 3)**, **MVVM architecture**, **Room (SQLite)** with multi-table relationships & auto-seeding, and **Jetpack Navigation Compose**.
 
 ---
 
-## 🌟 Core Feature: Day-to-Day Template Binding
+## 🌟 Core Features
 
-1. **Custom Workout Templates**: Build splits like *Push Day*, *Pull Day*, *Leg Day*, or *Full Body*.
-2. **Weekly Day Assignment**: Attach any template to any day of the week (Monday through Sunday) or set as a Rest Day.
-3. **Smart Today Home Screen**: On any given day, FitFlow automatically detects today's day-of-week, loads the attached template, and allows logging sets, reps, and weights with real-time completion tracking.
+1. **Smart Today Home Screen**:
+   - Automatically detects today's day-of-week, resolves the scheduled split, and displays today's workout target.
+   - Detailed set-by-set tracking with individual completion checkboxes, reps, weights, and sprint durations.
+   - Workout progress bar with live completion percentage.
+   - Quick **Rest Timer** countdown dialog (customizable duration with +/- adjustments).
+   - Direct shortcut to app settings.
+
+2. **Day-to-Day Template Split Binding**:
+   - Build custom workout templates (*Push Day*, *Pull Day*, *Leg Day*, *Upper Body*, etc.).
+   - Attach templates to any day of the week (Monday through Sunday) in the **Schedule** tab or mark days as Rest Days.
+
+3. **Unified Library Hub**:
+   - Centralized landing hub providing instant access to **Workout Templates** and the **Exercise Catalog**.
+   - **Workout Templates**: Create, customize, reorder exercises, validate name uniqueness, and backup/restore templates via JSON.
+   - **Exercise Catalog**: Extensive categorized library (Chest, Back, Legs, Shoulders, Arms, Core, Cardio, and Duration-based Sprints) with search, filter chips, and custom exercise creation.
+
+4. **Consistency Heatmap & Detailed Stats**:
+   - Monthly GitHub-style activity consistency grid with intensity-based illumination for active workout days.
+   - Interactive date selection opening a detailed day breakdown modal listing all completed movements, sets, reps, and weights.
+
+5. **Body Weight Tracking & Progress Chart**:
+   - Dedicated weight progression line graph with time-range filters (**1M**, **3M**, **6M**, **1Y**, **All**).
+   - Summary statistics cards: Starting Weight, Current Weight, Net Change (+/- kg), and Min/Max Weight.
+   - Log or edit daily body weight directly from the Stats screen or date detail dialog.
+
+6. **Customizable Appearance & Data Management**:
+   - **Theme Modes**: System Default, Light, Dark, and Pure AMOLED Black.
+   - **Accent Colors**: Electric Emerald, Ocean Blue, Sunset Orange, Radiant Purple, Crimson Red, and Golden Amber.
+   - **JSON Backup & Restore**: Export and import complete workout history and templates.
 
 ---
 
 ## 🏗️ Architecture & Tech Stack
 
-- **Language**: Kotlin 2.0
+- **Language**: Kotlin 2.0+
 - **UI Toolkit**: Jetpack Compose with Material 3 Design System
-- **Design Aesthetic**: Dark Gym Theme with Obsidian Slate (`#0D0E12`), Electric Emerald (`#00E676`), Cyber Cyan (`#00E5FF`), and category badge color accents
+- **Design Aesthetic**: Dark Gym Theme with Obsidian Slate (`#0D0E12`), Electric Emerald (`#00E676`), Cyber Cyan (`#00E5FF`), and dynamic accent support
 - **Architecture**: Clean MVVM (ViewModel + StateFlow + Repository Pattern)
-- **Local Persistence**: Room SQLite 2.6 with `@Entity`, `@Dao`, `@Relation`, `@Embedded`, `@Transaction`, and automatic database pre-seeding
-- **Navigation**: Jetpack Navigation Compose with slide & fade animations
+- **Local Persistence**: Room SQLite (Schema v7) with `@Entity`, `@Dao`, `@Relation`, `@Embedded`, `@Transaction`, and database pre-seeding
+- **Navigation**: Jetpack Navigation Compose with 4 core bottom navigation tabs (**Today**, **Library**, **Schedule**, **Stats**)
 - **Dependency Injection**: Application-scoped Container & Custom `ViewModelProvider.Factory`
 
 ---
 
-## 📊 Database Schema (Room SQLite)
+## 📊 Database Schema (Room SQLite v7)
 
-- **`ExerciseEntity`** (`exercises`): `id` (PK), `name`, `category` (Chest, Back, Legs, Shoulders, Arms, Core, Cardio), `defaultSets`, `defaultReps`, `isCustom`
+- **`ExerciseEntity`** (`exercises`): `id` (PK), `name` (Unique Index), `category`, `defaultSets`, `defaultReps`, `isCustom`, `isSprint`, `defaultDurationSeconds`
 - **`TemplateEntity`** (`templates`): `id` (PK), `name`, `createdDate`
-- **`TemplateExerciseEntity`** (`template_exercises`): `id` (PK), `templateId` (FK CASCADE), `exerciseId` (FK CASCADE), `targetSets`, `targetReps`, `restTimeSeconds`, `orderIndex`
+- **`TemplateExerciseEntity`** (`template_exercises`): `id` (PK), `templateId` (FK CASCADE), `exerciseId` (FK CASCADE), `targetSets`, `targetReps`, `targetDurationSeconds`, `restTimeSeconds`, `orderIndex`
 - **`DayAssignmentEntity`** (`day_assignments`): `id` (PK), `dayOfWeek` (1=Mon to 7=Sun), `templateId` (FK SET_NULL)
-- **`WorkoutLogEntity`** (`workout_logs`): `id` (PK), `date` (YYYY-MM-DD), `templateId` (FK), `exerciseId` (FK), `actualSets`, `actualReps`, `actualWeight`, `isCompleted`, `timestamp`
+- **`WorkoutLogEntity`** (`workout_logs`): `id` (PK), `date` (YYYY-MM-DD), `templateId` (FK), `exerciseId` (FK), `actualSets`, `actualReps`, `actualWeight`, `actualDurationSeconds`, `isCompleted`, `setsDataJson`, `timestamp`
+- **`WeightLogEntity`** (`weight_logs`): `id` (PK), `date` (Unique Index), `weightKg`, `timestamp`
 
 ---
 
-## 📱 Screens & Features
+## 📱 Bottom Navigation Tabs
 
-### 1. 🏠 Today (Home Screen)
-- Resolves today's date (e.g., "Saturday, August 22, 2026") and active split.
-- Workout progress header with smooth animated progress bar (e.g., "3 of 5 exercises completed • 60%").
-- Interactive exercise cards with steppers for **Sets**, **Reps**, and **Weight (kg)**.
-- Quick **Rest Timer** countdown dialog (e.g., 90s, with +/- adjustments).
-- One-tap **Mark Complete** button saving to `WorkoutLogEntity`.
-- Empty state with CTA when today is a rest day.
-
-### 2. 📑 Template Management
-- List of saved templates with exercise count and target muscle category chips.
-- Create new templates or edit existing ones.
-- Search & add exercises via bottom sheet with category filters.
-- Reorder exercises (move up / down) and adjust target sets/reps/rest.
-- Form validation (prevents empty name or 0 exercises).
-
-### 3. 📅 Weekly Schedule
-- 7-day Monday through Sunday overview.
-- Current day highlighted with glowing Electric Emerald border and `TODAY` pill badge.
-- Tap any day to open the bottom sheet and assign a template or set as a Rest Day.
-
-### 4. 📚 Exercise Library
-- Catalog of pre-seeded exercises categorized into Chest, Back, Legs, Shoulders, Arms, Core, Cardio.
-- Real-time search and filter chips.
-- Custom exercise CRUD with default sets & reps.
-
-### 5. 📈 History & Stats
-- Overview metrics: Total Workout Sessions, Completed Movements, Total Volume Lifted (kg).
-- Daily grouped workout history cards.
+| Tab | Route | Description |
+| :--- | :--- | :--- |
+| **Today** | `home` | Active split workout, set-by-set checklist, rest timer, and progress |
+| **Library** | `library` | Hub linking to Workout Templates and Exercise Catalog |
+| **Schedule** | `schedule` | 7-day Monday–Sunday visual weekly split planner |
+| **Stats** | `history` | Activity consistency heatmap, day detail modal, and body weight line chart |
 
 ---
 
 ## 🚀 How to Run in Android Studio
 
-1. Open **Android Studio** (Hedgehog, Iguana, Jellyfish, or newer).
-2. Select **Open** and choose this project directory: `Learning/Antigravity tutorial`.
-3. Let Gradle sync and download dependencies.
-4. Select an Android Emulator or physical device (API 26+).
+1. Open **Android Studio** (Koala, Ladybug, Iguana, or newer).
+2. Select **Open** and select the project directory: `d:\Fit-Flow`.
+3. Allow Gradle to sync and download dependencies.
+4. Select an Android Emulator or physical device running **Android API 26+** (Android 8.0+).
 5. Click **Run ▶ (Shift + F10)**.
 
 ---
 
 ## 🧪 Running Unit Tests
 
-Run the logic and domain tests:
+Execute the unit test suite with Gradle:
 ```bash
 ./gradlew test
+```
+
+Or assemble the debug APK:
+```bash
+./gradlew assembleDebug
 ```
