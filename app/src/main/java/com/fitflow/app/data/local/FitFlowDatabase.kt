@@ -7,13 +7,11 @@ import androidx.room.RoomDatabase
 import androidx.sqlite.db.SupportSQLiteDatabase
 import com.fitflow.app.data.local.dao.DayAssignmentDao
 import com.fitflow.app.data.local.dao.ExerciseDao
-import com.fitflow.app.data.local.dao.FoodLogDao
 import com.fitflow.app.data.local.dao.TemplateDao
 import com.fitflow.app.data.local.dao.WeightLogDao
 import com.fitflow.app.data.local.dao.WorkoutLogDao
 import com.fitflow.app.data.local.entity.DayAssignmentEntity
 import com.fitflow.app.data.local.entity.ExerciseEntity
-import com.fitflow.app.data.local.entity.FoodLogEntity
 import com.fitflow.app.data.local.entity.TemplateEntity
 import com.fitflow.app.data.local.entity.TemplateExerciseEntity
 import com.fitflow.app.data.local.entity.WeightLogEntity
@@ -29,10 +27,9 @@ import kotlinx.coroutines.launch
         TemplateExerciseEntity::class,
         DayAssignmentEntity::class,
         WorkoutLogEntity::class,
-        FoodLogEntity::class,
         WeightLogEntity::class
     ],
-    version = 6,
+    version = 7,
     exportSchema = false
 )
 abstract class FitFlowDatabase : RoomDatabase() {
@@ -41,7 +38,6 @@ abstract class FitFlowDatabase : RoomDatabase() {
     abstract fun templateDao(): TemplateDao
     abstract fun dayAssignmentDao(): DayAssignmentDao
     abstract fun workoutLogDao(): WorkoutLogDao
-    abstract fun foodLogDao(): FoodLogDao
     abstract fun weightLogDao(): WeightLogDao
 
     companion object {

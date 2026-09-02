@@ -5,7 +5,6 @@ import androidx.lifecycle.ViewModelProvider
 import com.fitflow.app.data.local.ThemePreferences
 import com.fitflow.app.data.repository.FitFlowRepository
 import com.fitflow.app.ui.exercises.ExerciseLibraryViewModel
-import com.fitflow.app.ui.food.FoodViewModel
 import com.fitflow.app.ui.history.HistoryViewModel
 import com.fitflow.app.ui.home.HomeViewModel
 import com.fitflow.app.ui.schedule.ScheduleViewModel
@@ -30,10 +29,6 @@ class ViewModelFactory(
             modelClass.isAssignableFrom(HomeViewModel::class.java) -> {
                 val repo = repository ?: throw IllegalArgumentException("Repository required for HomeViewModel")
                 HomeViewModel(repo) as T
-            }
-            modelClass.isAssignableFrom(FoodViewModel::class.java) -> {
-                val repo = repository ?: throw IllegalArgumentException("Repository required for FoodViewModel")
-                FoodViewModel(repo) as T
             }
             modelClass.isAssignableFrom(TemplatesViewModel::class.java) -> {
                 val repo = repository ?: throw IllegalArgumentException("Repository required for TemplatesViewModel")

@@ -23,12 +23,10 @@ class HistoryViewModel(
 
     val uiState: StateFlow<HistoryUiState> = combine(
         repository.getCompletedLogs(),
-        repository.getAllFoodLogs(),
         repository.getAllWeightLogs(),
         _messageState
-    ) { logs, foodLogs, weightLogs, messagePair ->
+    ) { logs, weightLogs, messagePair ->
         val groupedWorkouts = logs.groupBy { it.log.date }
-        val groupedFoods = foodLogs.groupBy { it.date }
         val distinctDatesCount = groupedWorkouts.keys.size
         val totalExercises = logs.size
         val totalVolume = logs.filter { !it.exercise.isSprint }.sumOf { logWithEx ->
@@ -56,7 +54,6 @@ class HistoryViewModel(
             totalExercisesLogged = totalExercises,
             totalVolumeKg = (totalVolume * 10).toInt() / 10.0,
             groupedByDate = groupedWorkouts,
-            foodLogsByDate = groupedFoods,
             weightLogs = weightLogs,
             weightTimeline = timeline,
             weightStats = stats,
@@ -128,7 +125,7 @@ class HistoryViewModel(
     fun deleteHistory() {
         viewModelScope.launch {
             repository.clearAllHistory()
-            _messageState.update { "All workout, food, and weight history cleared" to true }
+            _messageState.update { "All workout and weight history cleared" to true }
         }
     }
 

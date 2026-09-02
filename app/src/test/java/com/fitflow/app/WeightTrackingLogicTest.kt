@@ -170,7 +170,6 @@ class WeightTrackingLogicTest {
             app = "FitFlow",
             exportedAt = 3000L,
             logs = emptyList(),
-            foodLogs = emptyList(),
             weightLogs = originalWeightLogs
         )
 

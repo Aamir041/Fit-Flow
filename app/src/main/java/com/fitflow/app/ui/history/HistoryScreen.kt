@@ -66,7 +66,6 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.fitflow.app.data.local.entity.ExerciseEntity
-import com.fitflow.app.data.local.entity.FoodLogEntity
 import com.fitflow.app.data.local.entity.WeightLogEntity
 import com.fitflow.app.data.local.entity.WorkoutLogEntity
 import com.fitflow.app.data.local.relation.WorkoutLogWithExercise
@@ -150,7 +149,6 @@ fun HistoryScreenContent(
                     MonthContributionHeatmap(
                         yearMonth = selectedMonth,
                         groupedByDate = uiState.groupedByDate,
-                        foodLogsByDate = uiState.foodLogsByDate,
                         onPreviousMonth = { selectedMonth = selectedMonth.minusMonths(1) },
                         onNextMonth = { selectedMonth = selectedMonth.plusMonths(1) },
                         onDateSelected = { dateKey ->
@@ -195,16 +193,14 @@ fun HistoryScreenContent(
             )
         }
 
-        // Dialog showing history of exercises, foods & weight on selected date
+        // Dialog showing history of exercises & weight on selected date
         selectedDateForDetails?.let { dateKey ->
             val logsForDay = uiState.groupedByDate[dateKey] ?: emptyList()
-            val foodLogsForDay = uiState.foodLogsByDate[dateKey] ?: emptyList()
             val weightLogForDay = uiState.weightLogs.firstOrNull { it.date == dateKey }
 
             DayWorkoutDetailsDialog(
                 dateKey = dateKey,
                 logs = logsForDay,
-                foodLogs = foodLogsForDay,
                 weightLog = weightLogForDay,
                 onLogWeightForDay = {
                     try {
@@ -224,7 +220,6 @@ fun HistoryScreenContent(
 fun MonthContributionHeatmap(
     yearMonth: YearMonth,
     groupedByDate: Map<String, List<WorkoutLogWithExercise>>,
-    foodLogsByDate: Map<String, List<FoodLogEntity>> = emptyMap(),
     onPreviousMonth: () -> Unit,
     onNextMonth: () -> Unit,
     onDateSelected: (String) -> Unit,
@@ -445,7 +440,6 @@ fun MonthContributionHeatmap(
 fun DayWorkoutDetailsDialog(
     dateKey: String,
     logs: List<WorkoutLogWithExercise>,
-    foodLogs: List<FoodLogEntity> = emptyList(),
     weightLog: WeightLogEntity? = null,
     onLogWeightForDay: (() -> Unit)? = null,
     onDismiss: () -> Unit
@@ -457,11 +451,9 @@ fun DayWorkoutDetailsDialog(
         dateKey
     }
 
-    val totalCalories = foodLogs.sumOf { it.calories }
     val totalWorkouts = logs.size
-    val totalFoods = foodLogs.size
     val hasWeight = weightLog != null
-    val isEmpty = totalWorkouts == 0 && totalFoods == 0 && !hasWeight
+    val isEmpty = totalWorkouts == 0 && !hasWeight
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -477,9 +469,7 @@ fun DayWorkoutDetailsDialog(
                 Text(
                     text = when {
                         isEmpty -> "Rest day / No logs recorded"
-                        totalWorkouts > 0 && totalFoods > 0 -> "$totalWorkouts movements • $totalCalories kcal${if (hasWeight) " • ${weightLog.weightKg} kg" else ""}"
                         totalWorkouts > 0 -> "$totalWorkouts movements completed${if (hasWeight) " • ${weightLog.weightKg} kg" else ""}"
-                        totalFoods > 0 -> "$totalFoods food items • $totalCalories kcal${if (hasWeight) " • ${weightLog.weightKg} kg" else ""}"
                         else -> "Weight logged: ${weightLog?.weightKg} kg"
                     },
                     style = MaterialTheme.typography.labelSmall,
@@ -498,7 +488,7 @@ fun DayWorkoutDetailsDialog(
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     Text(
-                        text = "No workouts, food logs, or weight recorded for this day.",
+                        text = "No workouts or weight recorded for this day.",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         textAlign = TextAlign.Center
@@ -729,71 +719,6 @@ fun DayWorkoutDetailsDialog(
                                             }
                                         }
                                     }
-                                }
-                            }
-                        }
-                    }
-
-                    if (foodLogs.isNotEmpty()) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            Text(
-                                text = "FOOD & NUTRITION (${foodLogs.size})",
-                                style = MaterialTheme.typography.labelSmall,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.primary,
-                                letterSpacing = 1.sp
-                            )
-                            Text(
-                                text = "$totalCalories kcal",
-                                style = MaterialTheme.typography.labelSmall,
-                                fontWeight = FontWeight.ExtraBold,
-                                color = MaterialTheme.colorScheme.primary
-                            )
-                        }
-
-                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                            foodLogs.forEach { food ->
-                                val qtyFormatted = if (food.quantity % 1.0 == 0.0) {
-                                    food.quantity.toInt().toString()
-                                } else {
-                                    food.quantity.toString()
-                                }
-
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .clip(RoundedCornerShape(12.dp))
-                                        .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
-                                        .border(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f), RoundedCornerShape(12.dp))
-                                        .padding(12.dp),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.SpaceBetween
-                                ) {
-                                    Column(modifier = Modifier.weight(1f)) {
-                                        Text(
-                                            text = food.foodName,
-                                            style = MaterialTheme.typography.bodyMedium,
-                                            fontWeight = FontWeight.Bold,
-                                            color = MaterialTheme.colorScheme.onSurface
-                                        )
-                                        Spacer(modifier = Modifier.height(2.dp))
-                                        Text(
-                                            text = "$qtyFormatted ${food.unit} • ${food.mealTime}",
-                                            style = MaterialTheme.typography.bodySmall,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                                        )
-                                    }
-
-                                    Text(
-                                        text = "${food.calories} kcal",
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        fontWeight = FontWeight.ExtraBold,
-                                        color = MaterialTheme.colorScheme.primary
-                                    )
                                 }
                             }
                         }
