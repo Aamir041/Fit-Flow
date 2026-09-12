@@ -528,4 +528,135 @@ class FitFlowLogicTest {
         assertTrue(logItem.sets[0].isCompleted)
         assertFalse(logItem.sets[4].isCompleted)
     }
+
+    @Test
+    fun testCompletedExerciseRequiresEditConfirmation() {
+        val completedExercise = ExerciseLogItem(
+            templateExerciseId = 1L,
+            exerciseId = 101L,
+            name = "Barbell Squat",
+            category = "Legs",
+            targetSets = 4,
+            targetReps = 8,
+            restTimeSeconds = 90,
+            actualSets = 4,
+            actualReps = 8,
+            actualWeight = 100.0,
+            isCompleted = true
+        )
+
+        val uncompletedExercise = completedExercise.copy(isCompleted = false)
+
+        var openedLoggerExerciseId: Long? = null
+        var pendingConfirmationItem: ExerciseLogItem? = null
+
+        fun handleExerciseCardClick(item: ExerciseLogItem) {
+            if (item.isCompleted) {
+                pendingConfirmationItem = item
+            } else {
+                openedLoggerExerciseId = item.exerciseId
+            }
+        }
+
+        // Clicking uncompleted exercise directly opens logger without confirmation
+        handleExerciseCardClick(uncompletedExercise)
+        assertEquals(101L, openedLoggerExerciseId)
+        assertNull(pendingConfirmationItem)
+
+        // Reset state
+        openedLoggerExerciseId = null
+        pendingConfirmationItem = null
+
+        // Clicking completed exercise sets pending confirmation and does NOT open logger immediately
+        handleExerciseCardClick(completedExercise)
+        assertNull(openedLoggerExerciseId)
+        assertEquals(completedExercise, pendingConfirmationItem)
+
+        // Confirming edit in dialog opens the logger
+        fun onConfirmEdit(item: ExerciseLogItem) {
+            pendingConfirmationItem = null
+            openedLoggerExerciseId = item.exerciseId
+        }
+
+        onConfirmEdit(pendingConfirmationItem!!)
+        assertNull(pendingConfirmationItem)
+        assertEquals(101L, openedLoggerExerciseId)
+    }
+
+    @Test
+    fun testTypedCustomWeightValidationAndSetUpdate() {
+        fun parseTypedWeight(raw: String): Double? {
+            val trimmed = raw.trim()
+            val parsed = if (trimmed.isBlank()) 0.0 else trimmed.toDoubleOrNull()
+            return if (parsed != null && parsed in 0.0..999.0) {
+                ((parsed * 100).toInt()) / 100.0
+            } else null
+        }
+
+        assertEquals(82.5, parseTypedWeight("82.5"))
+        assertEquals(100.0, parseTypedWeight("100"))
+        assertEquals(0.0, parseTypedWeight("0"))
+        assertEquals(0.0, parseTypedWeight(""))
+        assertEquals(67.25, parseTypedWeight("67.25"))
+        assertNull(parseTypedWeight("abc"))
+        assertNull(parseTypedWeight("-5.0"))
+        assertNull(parseTypedWeight("1500.0")) // Beyond 999 max
+
+        // Test updating set with typed weight
+        val set = com.fitflow.app.ui.home.WorkoutSetUiModel(
+            setNumber = 2,
+            reps = 10,
+            weight = 50.0,
+            isCompleted = false
+        )
+
+        val typedWeight = parseTypedWeight("62.5")!!
+        val updatedSet = set.copy(weight = typedWeight)
+
+        assertEquals(62.5, updatedSet.weight, 0.001)
+        assertEquals(2, updatedSet.setNumber)
+        assertEquals(10, updatedSet.reps)
+    }
+
+    @Test
+    fun testSetCompletionClosesDialogAndTriggersRestTimer() {
+        var selectedExerciseIdForLogging: Long? = 101L
+        var activeRestTimerExercise: ExerciseLogItem? = null
+
+        val exercise = ExerciseLogItem(
+            templateExerciseId = 1L,
+            exerciseId = 101L,
+            name = "Incline Dumbbell Press",
+            category = "Chest",
+            targetSets = 3,
+            targetReps = 10,
+            restTimeSeconds = 90,
+            actualSets = 3,
+            actualReps = 10,
+            actualWeight = 30.0,
+            isCompleted = false
+        )
+
+        fun onToggleSetCompletion(willBeCompleted: Boolean) {
+            if (willBeCompleted) {
+                selectedExerciseIdForLogging = null
+                activeRestTimerExercise = exercise
+            }
+        }
+
+        // Initially logger is open, no rest timer
+        assertEquals(101L, selectedExerciseIdForLogging)
+        assertNull(activeRestTimerExercise)
+
+        // When set is marked complete:
+        onToggleSetCompletion(willBeCompleted = true)
+
+        // Logger should be closed and rest timer active
+        assertNull(selectedExerciseIdForLogging)
+        assertEquals(exercise, activeRestTimerExercise)
+        assertEquals(90, activeRestTimerExercise?.restTimeSeconds)
+    }
 }
+
+
+

@@ -219,8 +219,9 @@ class HomeViewModel(
                 current + (exerciseId to updatedLog)
             }
 
-            // If a set was just marked complete, trigger rest timer suggestion if restTime > 0
-            if (willBeCompleted && currentItem.restTimeSeconds > 0) {
+            // If a set was just marked complete, trigger rest timer and close the exercise dialog
+            if (willBeCompleted) {
+                _selectedExerciseForLoggingId.value = null
                 _activeRestTimer.value = currentItem
             }
         }
@@ -423,8 +424,9 @@ class HomeViewModel(
                 current + (item.exerciseId to savedLog)
             }
 
-            // If user just marked completed, trigger rest timer suggestion if rest time > 0
-            if (willBeCompleted && item.restTimeSeconds > 0) {
+            // If user just marked completed, trigger rest timer and close the exercise dialog
+            if (willBeCompleted) {
+                _selectedExerciseForLoggingId.value = null
                 _activeRestTimer.value = item
             }
         }

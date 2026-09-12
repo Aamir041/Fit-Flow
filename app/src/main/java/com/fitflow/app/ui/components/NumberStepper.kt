@@ -16,7 +16,13 @@ import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -107,6 +113,18 @@ fun DecimalStepper(
     unit: String = "kg",
     modifier: Modifier = Modifier
 ) {
+    var showTypeDialog by remember { mutableStateOf(false) }
+
+    if (showTypeDialog) {
+        TypeWeightDialog(
+            initialWeight = value,
+            title = "Enter $label",
+            unit = unit,
+            onSave = onValueChange,
+            onDismiss = { showTypeDialog = false }
+        )
+    }
+
     Column(
         modifier = modifier,
         horizontalAlignment = Alignment.CenterHorizontally
@@ -141,12 +159,20 @@ fun DecimalStepper(
             }
 
             val formatted = if (value % 1.0 == 0.0) "${value.toInt()}" else String.format("%.1f", value)
-            Text(
-                text = "$formatted $unit",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurface
-            )
+            Surface(
+                onClick = { showTypeDialog = true },
+                shape = RoundedCornerShape(8.dp),
+                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
+                modifier = Modifier.clip(RoundedCornerShape(8.dp))
+            ) {
+                Text(
+                    text = "$formatted $unit",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                )
+            }
 
             Box(
                 modifier = Modifier
@@ -169,3 +195,4 @@ fun DecimalStepper(
         }
     }
 }
+
