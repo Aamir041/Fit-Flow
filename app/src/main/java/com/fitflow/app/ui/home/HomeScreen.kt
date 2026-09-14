@@ -26,6 +26,7 @@ import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.FitnessCenter
 import androidx.compose.material.icons.filled.MonitorWeight
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.OutlinedButton
@@ -37,6 +38,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -51,9 +53,14 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
 import com.fitflow.app.ui.components.EmptyStateCard
 import com.fitflow.app.ui.components.FitFlowTopBar
-import com.fitflow.app.ui.components.RestTimerDialog
+import com.fitflow.app.ui.components.FloatingRestTimerBar
 import com.fitflow.app.ui.theme.FitFlowTheme
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
@@ -139,6 +146,7 @@ fun HomeScreenContent(
     )
 
     var showWeightDialog by remember { mutableStateOf(false) }
+    var exercisePendingEditConfirmation by remember { mutableStateOf<ExerciseLogItem?>(null) }
 
     Scaffold(
         topBar = {
@@ -151,87 +159,114 @@ fun HomeScreenContent(
         modifier = modifier.fillMaxSize(),
         containerColor = MaterialTheme.colorScheme.background
     ) { innerPadding ->
-        if (uiState.isLoading) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(innerPadding),
-                contentAlignment = Alignment.Center
-            ) {
-                CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding)
+        ) {
+            if (uiState.isLoading) {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
+                }
+            } else if (uiState.assignedTemplate == null || uiState.exercises.isEmpty()) {
+                // Rest Day / No template assigned for today
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    // Today's Weight Card on Rest Day
+                    item {
+                        DailyWeightCard(
+                            todayWeight = uiState.todayWeightLog,
+                            lastWeight = uiState.lastRecordedWeight,
+                            onLogWeightClick = { showWeightDialog = true }
+                        )
+                    }
+
+                    item {
+                        EmptyStateCard(
+                            title = "Rest Day or No Template Assigned",
+                            description = "There is no workout template attached to ${uiState.dayOfWeek.name.lowercase().replaceFirstChar { it.uppercase() }}. Tap below to assign a template or customize your weekly routine.",
+                            icon = Icons.Default.CalendarMonth,
+                            actionButtonText = "Assign Template to Today",
+                            onActionClick = onNavigateToSchedule
+                        )
+                    }
+
+                    // Bottom spacer
+                    item {
+                        Spacer(modifier = Modifier.height(if (uiState.activeRestTimer != null) 96.dp else 24.dp))
+                    }
+                }
+            } else {
+                // Template Active
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    // Today's Body Weight Quick Entry Card
+                    item {
+                        DailyWeightCard(
+                            todayWeight = uiState.todayWeightLog,
+                            lastWeight = uiState.lastRecordedWeight,
+                            onLogWeightClick = { showWeightDialog = true }
+                        )
+                    }
+
+                    // Workout Overview Header Card
+                    item {
+                        WorkoutOverviewCard(
+                            templateName = uiState.assignedTemplate.template.name,
+                            completedCount = uiState.completedCount,
+                            totalCount = uiState.totalCount,
+                            progressPercent = animatedProgress
+                        )
+                    }
+
+                    // Exercise Cards
+                    items(
+                        items = uiState.exercises,
+                        key = { it.templateExerciseId }
+                    ) { item ->
+                        ExerciseLogCard(
+                            item = item,
+                            onCardClick = {
+                                if (item.isCompleted) {
+                                    exercisePendingEditConfirmation = item
+                                } else {
+                                    onCardClick(item)
+                                }
+                            },
+                            onToggleCompleted = { onToggleCompleted(item) },
+                            onOpenTimer = { onOpenTimer(item) }
+                        )
+                    }
+
+                    // Bottom spacer
+                    item {
+                        Spacer(modifier = Modifier.height(if (uiState.activeRestTimer != null) 96.dp else 24.dp))
+                    }
+                }
             }
-        } else if (uiState.assignedTemplate == null || uiState.exercises.isEmpty()) {
-            // Rest Day / No template assigned for today
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(innerPadding),
-                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
+
+            // Floating Horizontal Rest Timer Bar (docked above bottom navigation bar, overlapping page content)
+            AnimatedVisibility(
+                visible = uiState.activeRestTimer != null,
+                enter = slideInVertically(initialOffsetY = { it }) + fadeIn(),
+                exit = slideOutVertically(targetOffsetY = { it }) + fadeOut(),
+                modifier = Modifier.align(Alignment.BottomCenter)
             ) {
-                // Today's Weight Card on Rest Day
-                item {
-                    DailyWeightCard(
-                        todayWeight = uiState.todayWeightLog,
-                        lastWeight = uiState.lastRecordedWeight,
-                        onLogWeightClick = { showWeightDialog = true }
+                uiState.activeRestTimer?.let { timerItem ->
+                    FloatingRestTimerBar(
+                        exerciseName = timerItem.name,
+                        initialSeconds = timerItem.restTimeSeconds.takeIf { it > 0 } ?: 90,
+                        onDismiss = onCloseTimer
                     )
-                }
-
-                item {
-                    EmptyStateCard(
-                        title = "Rest Day or No Template Assigned",
-                        description = "There is no workout template attached to ${uiState.dayOfWeek.name.lowercase().replaceFirstChar { it.uppercase() }}. Tap below to assign a template or customize your weekly routine.",
-                        icon = Icons.Default.CalendarMonth,
-                        actionButtonText = "Assign Template to Today",
-                        onActionClick = onNavigateToSchedule
-                    )
-                }
-            }
-        } else {
-            // Template Active
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(innerPadding),
-                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
-            ) {
-                // Today's Body Weight Quick Entry Card
-                item {
-                    DailyWeightCard(
-                        todayWeight = uiState.todayWeightLog,
-                        lastWeight = uiState.lastRecordedWeight,
-                        onLogWeightClick = { showWeightDialog = true }
-                    )
-                }
-
-                // Workout Overview Header Card
-                item {
-                    WorkoutOverviewCard(
-                        templateName = uiState.assignedTemplate.template.name,
-                        completedCount = uiState.completedCount,
-                        totalCount = uiState.totalCount,
-                        progressPercent = animatedProgress
-                    )
-                }
-
-                // Exercise Cards
-                items(
-                    items = uiState.exercises,
-                    key = { it.templateExerciseId }
-                ) { item ->
-                    ExerciseLogCard(
-                        item = item,
-                        onCardClick = { onCardClick(item) },
-                        onToggleCompleted = { onToggleCompleted(item) },
-                        onOpenTimer = { onOpenTimer(item) }
-                    )
-                }
-
-                // Bottom spacer
-                item {
-                    Spacer(modifier = Modifier.height(24.dp))
                 }
             }
         }
@@ -249,6 +284,63 @@ fun HomeScreenContent(
                     onDeleteWeight()
                 },
                 onDismiss = { showWeightDialog = false }
+            )
+        }
+
+        // Confirmation dialog when user clicks on a completed exercise to edit
+        exercisePendingEditConfirmation?.let { item ->
+            AlertDialog(
+                onDismissRequest = { exercisePendingEditConfirmation = null },
+                icon = {
+                    Icon(
+                        imageVector = Icons.Default.CheckCircle,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(28.dp)
+                    )
+                },
+                title = {
+                    Text(
+                        text = "Exercise Completed",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold
+                    )
+                },
+                text = {
+                    Text(
+                        text = "\"${item.name}\" is already marked as done. Do you still want to edit it?",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                },
+                confirmButton = {
+                    Button(
+                        onClick = {
+                            val targetItem = item
+                            exercisePendingEditConfirmation = null
+                            onCardClick(targetItem)
+                        },
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.primary,
+                            contentColor = MaterialTheme.colorScheme.onPrimary
+                        ),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Text("Edit", fontWeight = FontWeight.Bold)
+                    }
+                },
+                dismissButton = {
+                    TextButton(
+                        onClick = { exercisePendingEditConfirmation = null }
+                    ) {
+                        Text(
+                            text = "Cancel",
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                },
+                containerColor = MaterialTheme.colorScheme.surface,
+                shape = RoundedCornerShape(20.dp)
             )
         }
 
@@ -275,15 +367,6 @@ fun HomeScreenContent(
                     onOpenTimer(selectedItem)
                 },
                 onDismiss = onCloseSetLogger
-            )
-        }
-
-        // Rest Timer Dialog
-        if (uiState.activeRestTimer != null) {
-            RestTimerDialog(
-                initialSeconds = uiState.activeRestTimer.restTimeSeconds.takeIf { it > 0 } ?: 90,
-                exerciseName = uiState.activeRestTimer.name,
-                onDismiss = onCloseTimer
             )
         }
     }

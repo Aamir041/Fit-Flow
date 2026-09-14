@@ -36,6 +36,10 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -49,6 +53,7 @@ import com.fitflow.app.ui.components.CategoryBadge
 import com.fitflow.app.ui.components.DecimalStepper
 import com.fitflow.app.ui.components.NumberStepper
 import com.fitflow.app.ui.components.SprintBadge
+import com.fitflow.app.ui.components.TypeWeightDialog
 
 @Composable
 fun LogSetsDialog(
@@ -134,7 +139,7 @@ fun LogSetsDialog(
                             text = if (item.isSprint) {
                                 "Target: ${item.targetSets} rounds × ${item.targetDurationSeconds}s sprint • ${item.completedSetsCount} of ${item.totalSetsCount} completed"
                             } else {
-                                "Target: ${item.targetSets} sets × ${item.targetReps} reps • ${item.completedSetsCount} of ${item.totalSetsCount} completed"
+                                "Target: ${item.targetSets} sets × ${item.targetReps} reps • ${item.completedSetsCount} of ${item.totalSetsCount} completed • Tap weight to type"
                             },
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -239,6 +244,7 @@ fun LogSetsDialog(
                         } else {
                             SetRowItem(
                                 setModel = setModel,
+                                exerciseName = item.name,
                                 onToggleDone = { onToggleSet(setModel.setNumber) },
                                 onRepsChanged = { newReps ->
                                     onUpdateSetValues(setModel.setNumber, newReps, setModel.weight)
@@ -309,12 +315,27 @@ fun LogSetsDialog(
 @Composable
 fun SetRowItem(
     setModel: WorkoutSetUiModel,
+    exerciseName: String? = null,
     onToggleDone: () -> Unit,
     onRepsChanged: (Int) -> Unit,
     onWeightChanged: (Double) -> Unit,
     onRemoveSet: (() -> Unit)?,
     modifier: Modifier = Modifier
 ) {
+    var showTypeWeightDialog by remember { mutableStateOf(false) }
+
+    if (showTypeWeightDialog) {
+        TypeWeightDialog(
+            initialWeight = setModel.weight,
+            setNumber = setModel.setNumber,
+            exerciseName = exerciseName,
+            onSave = { typedWeight ->
+                onWeightChanged(typedWeight)
+            },
+            onDismiss = { showTypeWeightDialog = false }
+        )
+    }
+
     val isDone = setModel.isCompleted
     val rowBg = if (isDone) {
         MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
@@ -412,7 +433,7 @@ fun SetRowItem(
             }
         }
 
-        // Weight Stepper
+        // Weight Stepper & Click-to-Type Input
         Box(
             modifier = Modifier.weight(1.1f),
             contentAlignment = Alignment.Center
@@ -446,15 +467,24 @@ fun SetRowItem(
                     "${setModel.weight}"
                 }
 
-                Text(
-                    text = "$weightFormatted kg",
-                    style = MaterialTheme.typography.bodyMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.width(52.dp),
-                    textAlign = TextAlign.Center,
-                    fontSize = 12.sp
-                )
+                // Clickable Weight Chip to Type
+                Surface(
+                    onClick = { showTypeWeightDialog = true },
+                    shape = RoundedCornerShape(6.dp),
+                    color = MaterialTheme.colorScheme.surface.copy(alpha = 0.85f),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.35f)),
+                    modifier = Modifier.clip(RoundedCornerShape(6.dp))
+                ) {
+                    Text(
+                        text = "$weightFormatted kg",
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                        textAlign = TextAlign.Center,
+                        fontSize = 12.sp
+                    )
+                }
 
                 Box(
                     modifier = Modifier
